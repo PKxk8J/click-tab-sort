@@ -31,8 +31,8 @@ function makeSorter (keyGetter) {
     const querying = browser.tabs.query({currentWindow: true})
     querying.then((tabs) => {
       // 現在の並び順
-      const currentOrder = tabs.slice()
-      currentOrder.sort((tab1, tab2) => tab1.index - tab2.index)
+      const curOrder = tabs.slice()
+      curOrder.sort((tab1, tab2) => tab1.index - tab2.index)
 
       // ソート後の並び順
       const idealOrder = tabs.slice()
@@ -52,19 +52,19 @@ function makeSorter (keyGetter) {
       const orderedIds = new Set()
       // index 以下は既にソート済み
       let index = 0
-      let currentOrderIndex = 0
+      let curOrderIndex = 0
       let idealOrderIndex = 0
       while (index < tabs.length) {
-        if (currentOrder[currentOrderIndex].id === idealOrder[idealOrderIndex].id) {
+        if (curOrder[curOrderIndex].id === idealOrder[idealOrderIndex].id) {
           orderedIds.add(idealOrder[idealOrderIndex].id)
           index++
-          currentOrderIndex++
+          curOrderIndex++
           idealOrderIndex++
           continue
         }
 
-        if (orderedIds.has(currentOrder[currentOrderIndex].id)) {
-          currentOrderIndex++
+        if (orderedIds.has(curOrder[curOrderIndex].id)) {
+          curOrderIndex++
           continue
         }
 
