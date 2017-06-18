@@ -68,9 +68,11 @@ function makeSorter (keyGetter) {
           continue
         }
 
+        // コールバックの中で使うので固定する
         const id = idealOrder[idealOrderIndex].id
+        const curIndex = index
         const moving = browser.tabs.move(id, {index})
-        moving.then(() => console.log('Tab ' + id + ' was moved to ' + index), onError)
+        moving.then(() => console.log('Tab ' + id + ' was moved to ' + curIndex), onError)
         orderedIds.add(id)
         index++
         idealOrderIndex++
