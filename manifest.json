@@ -1,0 +1,15 @@
+{
+  "manifest_version": 2,
+  "name": "ClickTabSort",
+  "version": "1.0.0",
+  "description": "Sort tabs from right click menu",
+  "permissions": [
+    "tabs",
+    "contextMenus"
+  ],
+  "background": {
+    "scripts": [
+      "sort.js"
+    ]
+  }
+}
