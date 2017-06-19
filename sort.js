@@ -58,11 +58,9 @@ function makeSorter (keyGetter) {
       // まだソートできていない部分の先頭。headIndex より前は既にソート済み
       let headIndex = 0
       let curHeadIndex = 0
-      let idealHeadIndex = 0
       // まだソートできていない部分の末尾。tailIndex より後ろは既にソート済み
       let tailIndex = idealOrder.length - 1
       let curTailIndex = curOrder.length - 1
-      let idealTailIndex = idealOrder.length - 1
       while (headIndex <= tailIndex) {
         const curHeadId = curOrder[curHeadIndex].id
         if (orderedIds.has(curHeadId)) {
@@ -76,21 +74,19 @@ function makeSorter (keyGetter) {
           continue
         }
 
-        const idealHeadId = idealOrder[idealHeadIndex].id
+        const idealHeadId = idealOrder[headIndex].id
         if (curHeadId === idealHeadId) {
           orderedIds.add(idealHeadId)
           headIndex++
           curHeadIndex++
-          idealHeadIndex++
           continue
         }
 
-        const idealTailId = idealOrder[idealTailIndex].id
+        const idealTailId = idealOrder[tailIndex].id
         if (curTailId === idealTailId) {
           orderedIds.add(idealTailId)
           tailIndex--
           curTailIndex--
-          idealTailIndex--
           continue
         }
 
@@ -104,14 +100,12 @@ function makeSorter (keyGetter) {
           moving.then(() => console.log('Tab ' + idealHeadId + ' was moved to ' + moveIndex), onError)
           orderedIds.add(idealHeadId)
           headIndex++
-          idealHeadIndex++
         } else {
           const moveIndex = tailIndex
           const moving = browser.tabs.move(idealTailId, {index: moveIndex})
           moving.then(() => console.log('Tab ' + idealTailId + ' was moved to ' + moveIndex), onError)
           orderedIds.add(idealTailId)
           tailIndex--
-          idealTailIndex--
         }
       }
     }, onError)
