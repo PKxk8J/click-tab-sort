@@ -2,7 +2,7 @@
 
 chrome.contextMenus.create({
   id: 'sort',
-  title: 'ソート',
+  title: browser.i18n.getMessage('sort'),
   contexts: ['tab']
 })
 
@@ -15,7 +15,7 @@ chrome.contextMenus.create({
 
 chrome.contextMenus.create({
   id: 'title',
-  title: 'タイトル',
+  title: browser.i18n.getMessage('title'),
   contexts: ['tab'],
   parentId: 'sort'
 })
