@@ -48,34 +48,71 @@ function makeSorter (keyGetter) {
         }
       })
 
+      const idToIdealIndex = new Map()
+      for (let i = 0; i < idealOrder.length; i++) {
+        idToIdealIndex.set(idealOrder[i].id, i)
+      }
+
       // 既にソート済みのタブの ID
       const orderedIds = new Set()
-      // index 以下は既にソート済み
-      let index = 0
-      let curOrderIndex = 0
-      let idealOrderIndex = 0
-      while (index < tabs.length) {
-        if (curOrder[curOrderIndex].id === idealOrder[idealOrderIndex].id) {
-          orderedIds.add(idealOrder[idealOrderIndex].id)
-          index++
-          curOrderIndex++
-          idealOrderIndex++
+      // まだソートできていない部分の先頭。headIndex より前は既にソート済み
+      let headIndex = 0
+      let curHeadIndex = 0
+      let idealHeadIndex = 0
+      // まだソートできていない部分の末尾。tailIndex より後ろは既にソート済み
+      let tailIndex = idealOrder.length - 1
+      let curTailIndex = curOrder.length - 1
+      let idealTailIndex = idealOrder.length - 1
+      while (headIndex <= tailIndex) {
+        const curHeadId = curOrder[curHeadIndex].id
+        if (orderedIds.has(curHeadId)) {
+          curHeadIndex++
           continue
         }
 
-        if (orderedIds.has(curOrder[curOrderIndex].id)) {
-          curOrderIndex++
+        const curTailId = curOrder[curTailIndex].id
+        if (orderedIds.has(curTailId)) {
+          curTailIndex--
           continue
         }
 
-        // コールバックの中で使うので固定する
-        const id = idealOrder[idealOrderIndex].id
-        const curIndex = index
-        const moving = browser.tabs.move(id, {index})
-        moving.then(() => console.log('Tab ' + id + ' was moved to ' + curIndex), onError)
-        orderedIds.add(id)
-        index++
-        idealOrderIndex++
+        const idealHeadId = idealOrder[idealHeadIndex].id
+        if (curHeadId === idealHeadId) {
+          orderedIds.add(idealHeadId)
+          headIndex++
+          curHeadIndex++
+          idealHeadIndex++
+          continue
+        }
+
+        const idealTailId = idealOrder[idealTailIndex].id
+        if (curTailId === idealTailId) {
+          orderedIds.add(idealTailId)
+          tailIndex--
+          curTailIndex--
+          idealTailIndex--
+          continue
+        }
+
+        // 既存の並びを利用できるまでに必要な挿入の回数
+        const headDiff = idToIdealIndex.get(curHeadId) - headIndex
+        const tailDiff = tailIndex - idToIdealIndex.get(curTailId)
+
+        if (headDiff <= tailDiff) {
+          const moveIndex = headIndex
+          const moving = browser.tabs.move(idealHeadId, {index: moveIndex})
+          moving.then(() => console.log('Tab ' + idealHeadId + ' was moved to ' + moveIndex), onError)
+          orderedIds.add(idealHeadId)
+          headIndex++
+          idealHeadIndex++
+        } else {
+          const moveIndex = tailIndex
+          const moving = browser.tabs.move(idealTailId, {index: moveIndex})
+          moving.then(() => console.log('Tab ' + idealTailId + ' was moved to ' + moveIndex), onError)
+          orderedIds.add(idealTailId)
+          tailIndex--
+          idealTailIndex--
+        }
       }
     }, onError)
   }
