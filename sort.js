@@ -95,15 +95,15 @@ function makeSorter (keyGetter) {
         const tailDiff = tailIndex - idToIdealIndex.get(curTailId)
 
         if (headDiff <= tailDiff) {
-          const moveIndex = headIndex
-          const moving = browser.tabs.move(idealHeadId, {index: moveIndex})
-          moving.then(() => console.log('Tab ' + idealHeadId + ' was moved to ' + moveIndex), onError)
+          const index = headIndex
+          const moving = browser.tabs.move(idealHeadId, {index})
+          moving.then(() => console.log('Tab ' + idealHeadId + ' was moved to ' + index), onError)
           orderedIds.add(idealHeadId)
           headIndex++
         } else {
-          const moveIndex = tailIndex
-          const moving = browser.tabs.move(idealTailId, {index: moveIndex})
-          moving.then(() => console.log('Tab ' + idealTailId + ' was moved to ' + moveIndex), onError)
+          const index = tailIndex
+          const moving = browser.tabs.move(idealTailId, {index})
+          moving.then(() => console.log('Tab ' + idealTailId + ' was moved to ' + index), onError)
           orderedIds.add(idealTailId)
           tailIndex--
         }
