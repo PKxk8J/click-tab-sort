@@ -24,6 +24,69 @@ function onError (error) {
   console.error('Error: ' + error)
 }
 
+function rearrange (curOrder, idealOrder) {
+  const idToIdealIndex = new Map()
+  for (let i = 0; i < idealOrder.length; i++) {
+    idToIdealIndex.set(idealOrder[i].id, i)
+  }
+
+  // 既にソート済みのタブの ID
+  const orderedIds = new Set()
+  // まだソートできていない部分の先頭。headIndex より前は既にソート済み
+  let headIndex = 0
+  let curHeadIndex = 0
+  // まだソートできていない部分の末尾。tailIndex より後ろは既にソート済み
+  let tailIndex = idealOrder.length - 1
+  let curTailIndex = curOrder.length - 1
+  while (headIndex <= tailIndex) {
+    const curHeadId = curOrder[curHeadIndex].id
+    if (orderedIds.has(curHeadId)) {
+      curHeadIndex++
+      continue
+    }
+
+    const curTailId = curOrder[curTailIndex].id
+    if (orderedIds.has(curTailId)) {
+      curTailIndex--
+      continue
+    }
+
+    const idealHeadId = idealOrder[headIndex].id
+    if (curHeadId === idealHeadId) {
+      orderedIds.add(idealHeadId)
+      headIndex++
+      curHeadIndex++
+      continue
+    }
+
+    const idealTailId = idealOrder[tailIndex].id
+    if (curTailId === idealTailId) {
+      orderedIds.add(idealTailId)
+      tailIndex--
+      curTailIndex--
+      continue
+    }
+
+    // 既存の並びを利用できるまでに必要な挿入の回数
+    const headDiff = idToIdealIndex.get(curHeadId) - headIndex
+    const tailDiff = tailIndex - idToIdealIndex.get(curTailId)
+
+    if (headDiff <= tailDiff) {
+      const index = headIndex
+      const moving = browser.tabs.move(idealHeadId, {index})
+      moving.then(() => console.log('Tab ' + idealHeadId + ' was moved to ' + index), onError)
+      orderedIds.add(idealHeadId)
+      headIndex++
+    } else {
+      const index = tailIndex
+      const moving = browser.tabs.move(idealTailId, {index})
+      moving.then(() => console.log('Tab ' + idealTailId + ' was moved to ' + index), onError)
+      orderedIds.add(idealTailId)
+      tailIndex--
+    }
+  }
+}
+
 // タブのパラメータから順番を判定するキーを取り出す関数を受け取り、
 // タブをソートする関数をつくる
 function makeSorter (keyGetter) {
@@ -56,66 +119,7 @@ function makeSorter (keyGetter) {
       })
       const idealOrder = curOrder.slice(0, firstUnpinnedIndex).concat(unpinnedIdealOrder)
 
-      const idToIdealIndex = new Map()
-      for (let i = 0; i < idealOrder.length; i++) {
-        idToIdealIndex.set(idealOrder[i].id, i)
-      }
-
-      // 既にソート済みのタブの ID
-      const orderedIds = new Set()
-      // まだソートできていない部分の先頭。headIndex より前は既にソート済み
-      let headIndex = 0
-      let curHeadIndex = 0
-      // まだソートできていない部分の末尾。tailIndex より後ろは既にソート済み
-      let tailIndex = idealOrder.length - 1
-      let curTailIndex = curOrder.length - 1
-      while (headIndex <= tailIndex) {
-        const curHeadId = curOrder[curHeadIndex].id
-        if (orderedIds.has(curHeadId)) {
-          curHeadIndex++
-          continue
-        }
-
-        const curTailId = curOrder[curTailIndex].id
-        if (orderedIds.has(curTailId)) {
-          curTailIndex--
-          continue
-        }
-
-        const idealHeadId = idealOrder[headIndex].id
-        if (curHeadId === idealHeadId) {
-          orderedIds.add(idealHeadId)
-          headIndex++
-          curHeadIndex++
-          continue
-        }
-
-        const idealTailId = idealOrder[tailIndex].id
-        if (curTailId === idealTailId) {
-          orderedIds.add(idealTailId)
-          tailIndex--
-          curTailIndex--
-          continue
-        }
-
-        // 既存の並びを利用できるまでに必要な挿入の回数
-        const headDiff = idToIdealIndex.get(curHeadId) - headIndex
-        const tailDiff = tailIndex - idToIdealIndex.get(curTailId)
-
-        if (headDiff <= tailDiff) {
-          const index = headIndex
-          const moving = browser.tabs.move(idealHeadId, {index})
-          moving.then(() => console.log('Tab ' + idealHeadId + ' was moved to ' + index), onError)
-          orderedIds.add(idealHeadId)
-          headIndex++
-        } else {
-          const index = tailIndex
-          const moving = browser.tabs.move(idealTailId, {index})
-          moving.then(() => console.log('Tab ' + idealTailId + ' was moved to ' + index), onError)
-          orderedIds.add(idealTailId)
-          tailIndex--
-        }
-      }
+      rearrange(curOrder, idealOrder)
     }, onError)
   }
 }
