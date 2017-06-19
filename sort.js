@@ -34,9 +34,16 @@ function makeSorter (keyGetter) {
       const curOrder = tabs.slice()
       curOrder.sort((tab1, tab2) => tab1.index - tab2.index)
 
+      let firstUnpinnedIndex = 0
+      for (; firstUnpinnedIndex < curOrder.length; firstUnpinnedIndex++) {
+        if (!curOrder[firstUnpinnedIndex].pinned) {
+          break
+        }
+      }
+
       // ソート後の並び順
-      const idealOrder = tabs.slice()
-      idealOrder.sort((tab1, tab2) => {
+      const unpinnedIdealOrder = curOrder.slice(firstUnpinnedIndex)
+      unpinnedIdealOrder.sort((tab1, tab2) => {
         const key1 = keyGetter(tab1)
         const key2 = keyGetter(tab2)
         if (key1 < key2) {
@@ -47,6 +54,7 @@ function makeSorter (keyGetter) {
           return 0
         }
       })
+      const idealOrder = curOrder.slice(0, firstUnpinnedIndex).concat(unpinnedIdealOrder)
 
       const idToIdealIndex = new Map()
       for (let i = 0; i < idealOrder.length; i++) {
