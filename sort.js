@@ -89,7 +89,7 @@ function rearrange (curOrder, idealOrder) {
 
 // タブのパラメータから順番を判定するキーを取り出す関数を受け取り、
 // タブをソートする関数をつくる
-function makeSorter (keyGetter) {
+function makeSorter (comparator) {
   return () => {
     const querying = browser.tabs.query({currentWindow: true})
     querying.then((tabs) => {
@@ -106,17 +106,7 @@ function makeSorter (keyGetter) {
 
       // ソート後の並び順
       const unpinnedIdealOrder = curOrder.slice(firstUnpinnedIndex)
-      unpinnedIdealOrder.sort((tab1, tab2) => {
-        const key1 = keyGetter(tab1)
-        const key2 = keyGetter(tab2)
-        if (key1 < key2) {
-          return -1
-        } else if (key1 > key2) {
-          return 1
-        } else {
-          return 0
-        }
-      })
+      unpinnedIdealOrder.sort(comparator)
       const idealOrder = curOrder.slice(0, firstUnpinnedIndex).concat(unpinnedIdealOrder)
 
       rearrange(curOrder, idealOrder)
@@ -127,11 +117,11 @@ function makeSorter (keyGetter) {
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   switch (info.menuItemId) {
     case 'url': {
-      makeSorter((tab) => tab.url)()
+      makeSorter((tab1, tab2) => tab1.url.localeCompare(tab2.url))()
       break
     }
     case 'title': {
-      makeSorter((tab) => tab.title)()
+      makeSorter((tab1, tab2) => tab1.title.localeCompare(tab2.title))()
       break
     }
   }
