@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "ClickTabSort",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Sort tabs from right click menu on tabs.\n\nYou can sort tabs by URL or title.\nPinned tabs are not sorted.",
   "permissions": [
     "tabs",
