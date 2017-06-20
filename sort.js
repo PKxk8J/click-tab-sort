@@ -24,7 +24,7 @@ function onError (error) {
   console.error('Error: ' + error)
 }
 
-function rearrange (curOrder, idealOrder) {
+function rearrange (curOrder, idealOrder, callback) {
   const idToIdealIndex = new Map()
   for (let i = 0; i < idealOrder.length; i++) {
     idToIdealIndex.set(idealOrder[i].id, i)
@@ -41,6 +41,7 @@ function rearrange (curOrder, idealOrder) {
 
   function step () {
     if (headIndex > tailIndex) {
+      callback()
       return
     }
 
@@ -126,7 +127,13 @@ function makeSorter (comparator) {
       unpinnedIdealOrder.sort(comparator)
       const idealOrder = curOrder.slice(0, firstUnpinnedIndex).concat(unpinnedIdealOrder)
 
-      rearrange(curOrder, idealOrder)
+      const start = new Date()
+      rearrange(curOrder, idealOrder, () => console.log('Rearrange took ' + (new Date() - start) / 1000 + ' seconds'))
+      // 以下のコードは時々固まる
+      // const idealIds = idealOrder.map((tab) => tab.id)
+      // const moving = browser.tabs.move(idealIds, {index: 0})
+      // const start = new Date()
+      // moving.then(() => console.log('Rearrange took ' + (new Date() - start) / 1000 + ' seconds'), onError)
     }, onError)
   }
 }
