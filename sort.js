@@ -38,17 +38,24 @@ function rearrange (curOrder, idealOrder) {
   // まだソートできていない部分の末尾。tailIndex より後ろは既にソート済み
   let tailIndex = idealOrder.length - 1
   let curTailIndex = curOrder.length - 1
-  while (headIndex <= tailIndex) {
+
+  function step () {
+    if (headIndex > tailIndex) {
+      return
+    }
+
     const curHeadId = curOrder[curHeadIndex].id
     if (orderedIds.has(curHeadId)) {
       curHeadIndex++
-      continue
+      step()
+      return
     }
 
     const curTailId = curOrder[curTailIndex].id
     if (orderedIds.has(curTailId)) {
       curTailIndex--
-      continue
+      step()
+      return
     }
 
     const idealHeadId = idealOrder[headIndex].id
@@ -56,7 +63,8 @@ function rearrange (curOrder, idealOrder) {
       orderedIds.add(idealHeadId)
       headIndex++
       curHeadIndex++
-      continue
+      step()
+      return
     }
 
     const idealTailId = idealOrder[tailIndex].id
@@ -64,7 +72,8 @@ function rearrange (curOrder, idealOrder) {
       orderedIds.add(idealTailId)
       tailIndex--
       curTailIndex--
-      continue
+      step()
+      return
     }
 
     // 既存の並びを利用できるまでに必要な挿入の回数
@@ -74,17 +83,25 @@ function rearrange (curOrder, idealOrder) {
     if (headDiff <= tailDiff) {
       const index = headIndex
       const moving = browser.tabs.move(idealHeadId, {index})
-      moving.then(() => console.log('Tab ' + idealHeadId + ' was moved to ' + index), onError)
-      orderedIds.add(idealHeadId)
-      headIndex++
+      moving.then(() => {
+        console.log('Tab ' + idealHeadId + ' was moved to ' + index)
+        orderedIds.add(idealHeadId)
+        headIndex++
+        step()
+      }, onError)
     } else {
       const index = tailIndex
       const moving = browser.tabs.move(idealTailId, {index})
-      moving.then(() => console.log('Tab ' + idealTailId + ' was moved to ' + index), onError)
-      orderedIds.add(idealTailId)
-      tailIndex--
+      moving.then(() => {
+        console.log('Tab ' + idealTailId + ' was moved to ' + index)
+        orderedIds.add(idealTailId)
+        tailIndex--
+        step()
+      }, onError)
     }
   }
+
+  step()
 }
 
 // タブのパラメータから順番を判定するキーを取り出す関数を受け取り、
