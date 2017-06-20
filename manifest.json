@@ -3,6 +3,11 @@
   "name": "ClickTabSort",
   "version": "2.0.2",
   "description": "Sort tabs from right click menu on tabs.\n\nYou can sort tabs by URL or title.\nPinned tabs are not sorted.",
+  "applications": {
+    "gecko": {
+      "strict_min_version": "53.0"
+    }
+  },
   "permissions": [
     "tabs",
     "contextMenus"
