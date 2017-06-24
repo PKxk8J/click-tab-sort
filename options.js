@@ -1,9 +1,10 @@
 'use strict'
 
-const LABEL_TITLE = browser.i18n.getMessage('title')
-const LABEL_SAVE = browser.i18n.getMessage('save')
+const { i18n, storage } = browser
+const storageArea = storage.sync
 
-const storage = browser.storage.sync
+const LABEL_TITLE = i18n.getMessage('title')
+const LABEL_SAVE = i18n.getMessage('save')
 
 document.getElementById('label_title').innerText = LABEL_TITLE
 document.getElementById('label_save').innerText = LABEL_SAVE
@@ -13,7 +14,7 @@ function onError (error) {
 }
 
 function restore () {
-  const getting = storage.get()
+  const getting = storageArea.get()
   getting.then((result) => {
     const urlOn = typeof result.url === 'undefined' || result.url
     const titleOn = typeof result.title === 'undefined' || result.title
@@ -27,7 +28,7 @@ function save (e) {
 
   const urlOn = document.getElementById('url').checked
   const titleOn = document.getElementById('title').checked
-  const setting = storage.set({
+  const setting = storageArea.set({
     url: urlOn,
     title: titleOn
   })

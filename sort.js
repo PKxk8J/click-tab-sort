@@ -1,9 +1,10 @@
 'use strict'
 
-const LABEL_SORT = browser.i18n.getMessage('sort')
-const LABEL_TITLE = browser.i18n.getMessage('title')
+const { contextMenus, i18n, storage, tabs } = browser
+const storageArea = storage.sync
 
-const storage = browser.storage.sync
+const LABEL_SORT = i18n.getMessage('sort')
+const LABEL_TITLE = i18n.getMessage('title')
 
 function onError (error) {
   console.error('Error: ' + error)
@@ -14,13 +15,13 @@ function changeSetting (result) {
   const titleOn = typeof result.title === 'undefined' || result.title
 
   // 一旦、全削除してから追加する
-  const removing = browser.contextMenus.removeAll()
+  const removing = contextMenus.removeAll()
   removing.then(() => {
     console.log('Clear items')
 
     if (urlOn || titleOn) {
       console.log('Add ' + LABEL_SORT + ' item')
-      browser.contextMenus.create({
+      contextMenus.create({
         id: 'sort',
         title: LABEL_SORT,
         contexts: ['tab']
@@ -29,7 +30,7 @@ function changeSetting (result) {
 
     function setKeyItem (on, id, title) {
       if (on) {
-        browser.contextMenus.create({
+        contextMenus.create({
           id,
           title,
           contexts: ['tab'],
@@ -43,9 +44,9 @@ function changeSetting (result) {
   }, onError)
 }
 
-const getting = storage.get()
+const getting = storageArea.get()
 getting.then(changeSetting, onError)
-browser.storage.onChanged.addListener((changes, area) => {
+storage.onChanged.addListener((changes, area) => {
   const result = {
     url: changes.url.newValue,
     title: changes.title.newValue
@@ -112,7 +113,7 @@ function rearrange (curOrder, idealOrder, callback) {
 
     if (headDiff <= tailDiff) {
       const index = headIndex
-      const moving = browser.tabs.move(idealHeadId, {index})
+      const moving = tabs.move(idealHeadId, {index})
       moving.then(() => {
         console.log('Tab ' + idealHeadId + ' was moved to ' + index)
         orderedIds.add(idealHeadId)
@@ -121,7 +122,7 @@ function rearrange (curOrder, idealOrder, callback) {
       }, onError)
     } else {
       const index = tailIndex
-      const moving = browser.tabs.move(idealTailId, {index})
+      const moving = tabs.move(idealTailId, {index})
       moving.then(() => {
         console.log('Tab ' + idealTailId + ' was moved to ' + index)
         orderedIds.add(idealTailId)
@@ -138,10 +139,10 @@ function rearrange (curOrder, idealOrder, callback) {
 // タブをソートする関数をつくる
 function makeSorter (comparator) {
   return () => {
-    const querying = browser.tabs.query({currentWindow: true})
-    querying.then((tabs) => {
+    const querying = tabs.query({currentWindow: true})
+    querying.then((tabList) => {
       // 現在の並び順
-      const curOrder = tabs.slice()
+      const curOrder = tabList.slice()
       curOrder.sort((tab1, tab2) => tab1.index - tab2.index)
 
       let firstUnpinnedIndex = 0
@@ -160,14 +161,14 @@ function makeSorter (comparator) {
       rearrange(curOrder, idealOrder, () => console.log('Rearrange took ' + (new Date() - start) / 1000 + ' seconds'))
       // 以下のコードはタブが多いと固まる場合がある
       // const idealIds = idealOrder.map((tab) => tab.id)
-      // const moving = browser.tabs.move(idealIds, {index: 0})
+      // const moving = tabs.move(idealIds, {index: 0})
       // const start = new Date()
       // moving.then(() => console.log('Rearrange took ' + (new Date() - start) / 1000 + ' seconds'), onError)
     }, onError)
   }
 }
 
-browser.contextMenus.onClicked.addListener((info, tab) => {
+contextMenus.onClicked.addListener((info, tab) => {
   switch (info.menuItemId) {
     case 'url': {
       makeSorter((tab1, tab2) => tab1.url.localeCompare(tab2.url))()
