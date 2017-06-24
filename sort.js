@@ -1,28 +1,59 @@
 'use strict'
 
-chrome.contextMenus.create({
-  id: 'sort',
-  title: browser.i18n.getMessage('sort'),
-  contexts: ['tab']
-})
-
-chrome.contextMenus.create({
-  id: 'url',
-  title: 'URL',
-  contexts: ['tab'],
-  parentId: 'sort'
-})
-
-chrome.contextMenus.create({
-  id: 'title',
-  title: browser.i18n.getMessage('title'),
-  contexts: ['tab'],
-  parentId: 'sort'
-})
+const LABEL_SORT = browser.i18n.getMessage('sort')
+const LABEL_TITLE = browser.i18n.getMessage('title')
 
 function onError (error) {
   console.error('Error: ' + error)
 }
+
+function changeSetting (result) {
+  const urlOn = typeof result.url === 'undefined' || result.url
+  const titleOn = typeof result.title === 'undefined' || result.title
+
+  // 一旦、全削除してから追加する
+  const removing = browser.contextMenus.removeAll()
+  removing.then(() => {
+    console.log('Clear items')
+
+    if (urlOn || titleOn) {
+      console.log('Add ' + LABEL_SORT + ' item')
+      browser.contextMenus.create({
+        id: 'sort',
+        title: LABEL_SORT,
+        contexts: ['tab']
+      })
+    }
+
+    function setKeyItem (on, id, title) {
+      if (on) {
+        browser.contextMenus.create({
+          id,
+          title,
+          contexts: ['tab'],
+          parentId: 'sort'
+        }, () => console.log('Add ' + title + ' item'))
+      }
+    }
+
+    setKeyItem(urlOn, 'url', 'URL')
+    setKeyItem(titleOn, 'title', LABEL_TITLE)
+  }, onError)
+}
+
+const getting = browser.storage.local.get()
+getting.then(changeSetting, onError)
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') {
+    return
+  }
+
+  const result = {
+    url: changes.url.newValue,
+    title: changes.title.newValue
+  }
+  changeSetting(result)
+})
 
 function rearrange (curOrder, idealOrder, callback) {
   const idToIdealIndex = new Map()

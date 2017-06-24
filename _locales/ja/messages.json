@@ -4,5 +4,8 @@
   },
   "title": {
     "message": "タイトル"
+  },
+  "save": {
+    "message": "保存"
   }
 }
