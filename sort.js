@@ -4,54 +4,50 @@ const { contextMenus, i18n, storage, tabs } = browser
 const storageArea = storage.sync
 
 const LABEL_SORT = i18n.getMessage('sort')
+const LABEL_URL = i18n.getMessage('url')
 const LABEL_TITLE = i18n.getMessage('title')
 
 function onError (error) {
   console.error('Error: ' + error)
 }
 
-function changeSetting (result) {
-  const urlOn = typeof result.url === 'undefined' || result.url
-  const titleOn = typeof result.title === 'undefined' || result.title
+function addMenuItem (id, title, parentId) {
+  contextMenus.create({
+    id,
+    title,
+    contexts: ['tab'],
+    parentId
+  }, () => console.log('Added ' + title + ' menu item'))
+}
+
+function changeMenu (result) {
+  const { url: urlOn = true, title: titleOn = true } = result
 
   // 一旦、全削除してから追加する
   const removing = contextMenus.removeAll()
   removing.then(() => {
-    console.log('Clear items')
+    console.log('Clear menu items')
 
-    if (urlOn || titleOn) {
-      console.log('Add ' + LABEL_SORT + ' item')
-      contextMenus.create({
-        id: 'sort',
-        title: LABEL_SORT,
-        contexts: ['tab']
-      })
+    if (urlOn && titleOn) {
+      addMenuItem('sort', LABEL_SORT)
+      addMenuItem('url', LABEL_URL, 'sort')
+      addMenuItem('title', LABEL_TITLE, 'sort')
+    } else if (urlOn) {
+      addMenuItem('url', i18n.getMessage('sortBy', LABEL_URL))
+    } else if (titleOn) {
+      addMenuItem('title', i18n.getMessage('sortBy', LABEL_TITLE))
     }
-
-    function setKeyItem (on, id, title) {
-      if (on) {
-        contextMenus.create({
-          id,
-          title,
-          contexts: ['tab'],
-          parentId: 'sort'
-        }, () => console.log('Add ' + title + ' item'))
-      }
-    }
-
-    setKeyItem(urlOn, 'url', 'URL')
-    setKeyItem(titleOn, 'title', LABEL_TITLE)
   }, onError)
 }
 
 const getting = storageArea.get()
-getting.then(changeSetting, onError)
+getting.then(changeMenu, onError)
 storage.onChanged.addListener((changes, area) => {
   const result = {
     url: changes.url.newValue,
     title: changes.title.newValue
   }
-  changeSetting(result)
+  changeMenu(result)
 })
 
 function rearrange (curOrder, idealOrder, callback) {
