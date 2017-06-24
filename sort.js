@@ -160,7 +160,7 @@ function makeSorter (comparator) {
 
       const start = new Date()
       rearrange(curOrder, idealOrder, () => console.log('Rearrange took ' + (new Date() - start) / 1000 + ' seconds'))
-      // 以下のコードは時々固まる
+      // 以下のコードはタブが多いと固まる場合がある
       // const idealIds = idealOrder.map((tab) => tab.id)
       // const moving = browser.tabs.move(idealIds, {index: 0})
       // const start = new Date()
