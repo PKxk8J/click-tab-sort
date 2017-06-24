@@ -5,7 +5,7 @@
   "description": "Sort tabs from right click menu on tabs.\n\nYou can sort tabs by URL or title.\nPinned tabs are not sorted.\n\nIn options, you can select items displayed on menu.",
   "applications": {
     "gecko": {
-      "id": "{09da9f92-36e7-4eda-9041-ed22c7db649e}",
+      "id": "{9a51d52f-40fa-44c6-9c62-66936e43c4db}",
       "strict_min_version": "53.0"
     }
   },
