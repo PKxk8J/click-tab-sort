@@ -169,7 +169,7 @@ function makeSorter (comparator) {
   }
 }
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+browser.contextMenus.onClicked.addListener((info, tab) => {
   switch (info.menuItemId) {
     case 'url': {
       makeSorter((tab1, tab2) => tab1.url.localeCompare(tab2.url))()
