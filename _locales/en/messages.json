@@ -2,6 +2,12 @@
   "sort": {
     "message": "Sort"
   },
+  "sortBy": {
+    "message": "Sort by $1"
+  },
+  "url": {
+    "message": "URL"
+  },
   "title": {
     "message": "Title"
   },

@@ -3,9 +3,11 @@
 const { i18n, storage } = browser
 const storageArea = storage.sync
 
+const LABEL_URL = i18n.getMessage('url')
 const LABEL_TITLE = i18n.getMessage('title')
 const LABEL_SAVE = i18n.getMessage('save')
 
+document.getElementById('label_url').innerText = LABEL_URL
 document.getElementById('label_title').innerText = LABEL_TITLE
 document.getElementById('label_save').innerText = LABEL_SAVE
 
@@ -16,8 +18,7 @@ function onError (error) {
 function restore () {
   const getting = storageArea.get()
   getting.then((result) => {
-    const urlOn = typeof result.url === 'undefined' || result.url
-    const titleOn = typeof result.title === 'undefined' || result.title
+    const { url: urlOn = true, title: titleOn = true } = result
     document.getElementById('url').checked = urlOn
     document.getElementById('title').checked = titleOn
   }, onError)
