@@ -4,5 +4,8 @@
   },
   "title": {
     "message": "Title"
+  },
+  "save": {
+    "message": "Save"
   }
 }

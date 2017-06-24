@@ -1,21 +1,26 @@
 {
   "manifest_version": 2,
   "name": "ClickTabSort",
-  "version": "2.0.2",
-  "description": "Sort tabs from right click menu on tabs.\n\nYou can sort tabs by URL or title.\nPinned tabs are not sorted.",
+  "version": "2.1.0",
+  "description": "Sort tabs from right click menu on tabs.\n\nYou can sort tabs by URL or title.\nPinned tabs are not sorted.\n\nIn options, you can select items displayed on menu.",
   "applications": {
     "gecko": {
+      "id": "{09da9f92-36e7-4eda-9041-ed22c7db649e}",
       "strict_min_version": "53.0"
     }
   },
   "permissions": [
     "tabs",
-    "contextMenus"
+    "contextMenus",
+    "storage"
   ],
   "background": {
     "scripts": [
       "sort.js"
     ]
   },
-  "default_locale": "en"
+  "default_locale": "en",
+  "options_ui": {
+    "page": "options.html"
+  }
 }

@@ -1,28 +1,57 @@
 'use strict'
 
-chrome.contextMenus.create({
-  id: 'sort',
-  title: browser.i18n.getMessage('sort'),
-  contexts: ['tab']
-})
+const LABEL_SORT = browser.i18n.getMessage('sort')
+const LABEL_TITLE = browser.i18n.getMessage('title')
 
-chrome.contextMenus.create({
-  id: 'url',
-  title: 'URL',
-  contexts: ['tab'],
-  parentId: 'sort'
-})
-
-chrome.contextMenus.create({
-  id: 'title',
-  title: browser.i18n.getMessage('title'),
-  contexts: ['tab'],
-  parentId: 'sort'
-})
+const storage = browser.storage.sync
 
 function onError (error) {
   console.error('Error: ' + error)
 }
+
+function changeSetting (result) {
+  const urlOn = typeof result.url === 'undefined' || result.url
+  const titleOn = typeof result.title === 'undefined' || result.title
+
+  // 一旦、全削除してから追加する
+  const removing = browser.contextMenus.removeAll()
+  removing.then(() => {
+    console.log('Clear items')
+
+    if (urlOn || titleOn) {
+      console.log('Add ' + LABEL_SORT + ' item')
+      browser.contextMenus.create({
+        id: 'sort',
+        title: LABEL_SORT,
+        contexts: ['tab']
+      })
+    }
+
+    function setKeyItem (on, id, title) {
+      if (on) {
+        browser.contextMenus.create({
+          id,
+          title,
+          contexts: ['tab'],
+          parentId: 'sort'
+        }, () => console.log('Add ' + title + ' item'))
+      }
+    }
+
+    setKeyItem(urlOn, 'url', 'URL')
+    setKeyItem(titleOn, 'title', LABEL_TITLE)
+  }, onError)
+}
+
+const getting = storage.get()
+getting.then(changeSetting, onError)
+browser.storage.onChanged.addListener((changes, area) => {
+  const result = {
+    url: changes.url.newValue,
+    title: changes.title.newValue
+  }
+  changeSetting(result)
+})
 
 function rearrange (curOrder, idealOrder, callback) {
   const idToIdealIndex = new Map()
@@ -129,7 +158,7 @@ function makeSorter (comparator) {
 
       const start = new Date()
       rearrange(curOrder, idealOrder, () => console.log('Rearrange took ' + (new Date() - start) / 1000 + ' seconds'))
-      // 以下のコードは時々固まる
+      // 以下のコードはタブが多いと固まる場合がある
       // const idealIds = idealOrder.map((tab) => tab.id)
       // const moving = browser.tabs.move(idealIds, {index: 0})
       // const start = new Date()
@@ -138,7 +167,7 @@ function makeSorter (comparator) {
   }
 }
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+browser.contextMenus.onClicked.addListener((info, tab) => {
   switch (info.menuItemId) {
     case 'url': {
       makeSorter((tab1, tab2) => tab1.url.localeCompare(tab2.url))()
