@@ -3,6 +3,8 @@
 const LABEL_SORT = browser.i18n.getMessage('sort')
 const LABEL_TITLE = browser.i18n.getMessage('title')
 
+const storage = browser.storage.sync
+
 function onError (error) {
   console.error('Error: ' + error)
 }
@@ -41,13 +43,9 @@ function changeSetting (result) {
   }, onError)
 }
 
-const getting = browser.storage.local.get()
+const getting = storage.get()
 getting.then(changeSetting, onError)
 browser.storage.onChanged.addListener((changes, area) => {
-  if (area !== 'local') {
-    return
-  }
-
   const result = {
     url: changes.url.newValue,
     title: changes.title.newValue

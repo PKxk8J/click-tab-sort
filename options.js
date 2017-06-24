@@ -3,6 +3,8 @@
 const LABEL_TITLE = browser.i18n.getMessage('title')
 const LABEL_SAVE = browser.i18n.getMessage('save')
 
+const storage = browser.storage.sync
+
 document.getElementById('label_title').innerText = LABEL_TITLE
 document.getElementById('label_save').innerText = LABEL_SAVE
 
@@ -11,7 +13,7 @@ function onError (error) {
 }
 
 function restore () {
-  const getting = browser.storage.local.get()
+  const getting = storage.get()
   getting.then((result) => {
     const urlOn = typeof result.url === 'undefined' || result.url
     const titleOn = typeof result.title === 'undefined' || result.title
@@ -25,7 +27,7 @@ function save (e) {
 
   const urlOn = document.getElementById('url').checked
   const titleOn = document.getElementById('title').checked
-  const setting = browser.storage.local.set({
+  const setting = storage.set({
     url: urlOn,
     title: titleOn
   })
