@@ -21,7 +21,7 @@
     "message": "ソート中..."
   },
   "successMessage": {
-    "message": "ソート完了: $TIME$秒\n$ALL$個中$MOVED$個のタブが移動しました",
+    "message": "ソート完了: $TIME$秒\n$ALL$個中$MOVED$個のタブを移動",
     "placeholders": {
       "time": {
         "content": "$1"
@@ -35,7 +35,7 @@
     }
   },
   "failureMessage": {
-    "message": "ソート失敗: $TIME$秒\n$ALL$個中$MOVED$個のタブが移動しました",
+    "message": "ソート失敗: $TIME$秒\n$ALL$個中$MOVED$個のタブを移動",
     "placeholders": {
       "time": {
         "content": "$1"

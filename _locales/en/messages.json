@@ -28,10 +28,10 @@
     "message": "Save"
   },
   "sorting": {
-    "message": "Sorting..."
+    "message": "Sorting tabs..."
   },
   "successMessage": {
-    "message": "Completed in $TIME$ seconds.\n$MOVED$ of $ALL$ tabs were moved.",
+    "message": "Sorting tabs completed in $TIME$ seconds.\n$MOVED$ of $ALL$ tabs were moved.",
     "placeholders": {
       "time": {
         "content": "$1"
@@ -45,7 +45,7 @@
     }
   },
   "failureMessage": {
-    "message": "Failed in $TIME$ seconds.\n$MOVED$ of $ALL$ tabs were moved.",
+    "message": "Sorting tabs failed in $TIME$ seconds.\n$MOVED$ of $ALL$ tabs were moved.",
     "placeholders": {
       "time": {
         "content": "$1"
