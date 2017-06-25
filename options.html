@@ -8,9 +8,16 @@
   <body>
 
     <form id="form">
-      <label><input id="url" type="checkbox"/><span id="label_url"/></label><br/>
-      <label><input id="title" type="checkbox"/><span id="label_title"/></label><br/>
-      <button id="save" type="submit"><span id="label_save"/></button>
+      <ul>
+        <li><span id="label_menu_item"></span>
+          <ul style="list-style-type:none">
+            <li><label><input id="url" type="checkbox"/><span id="label_url"></span></label></li>
+            <li><label><input id="title" type="checkbox"/><span id="label_title"></span></label></li>
+          </ul>
+        </li>
+        <li><label><span id="label_notification"></span><input id="notification" type="checkbox"/></label></li>
+      </ul>
+      <div align="right"><button id="save" type="submit"><span id="label_save"></span></button></div>
     </form>
 
     <script src="options.js"></script>

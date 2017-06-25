@@ -1,11 +1,16 @@
 'use strict'
 
-const { contextMenus, i18n, storage, tabs } = browser
+const { contextMenus, i18n, notifications, storage, tabs } = browser
 const storageArea = storage.sync
+
+const NOTIFICATION_ID = i18n.getMessage('name')
 
 const LABEL_SORT = i18n.getMessage('sort')
 const LABEL_URL = i18n.getMessage('url')
 const LABEL_TITLE = i18n.getMessage('title')
+const LABEL_SORTING = i18n.getMessage('sorting')
+
+let notificationOn = false
 
 function onError (error) {
   console.error('Error: ' + error)
@@ -40,14 +45,20 @@ function changeMenu (result) {
   }, onError)
 }
 
+function changeSetting (result) {
+  notificationOn = result.notification
+  changeMenu(result)
+}
+
 const getting = storageArea.get()
-getting.then(changeMenu, onError)
+getting.then(changeSetting, onError)
 storage.onChanged.addListener((changes, area) => {
   const result = {
     url: changes.url.newValue,
-    title: changes.title.newValue
+    title: changes.title.newValue,
+    notification: changes.notification.newValue
   }
-  changeMenu(result)
+  changeSetting(result)
 })
 
 function rearrange (curOrder, idealOrder, callback) {
@@ -65,9 +76,18 @@ function rearrange (curOrder, idealOrder, callback) {
   let tailIndex = idealOrder.length - 1
   let curTailIndex = curOrder.length - 1
 
+  let nMoves = 0
+
+  function onRearrangeError (error) {
+    onError(error)
+    const success = false
+    callback(success, idealOrder.length, nMoves)
+  }
+
   function step () {
     if (headIndex > tailIndex) {
-      callback()
+      const success = true
+      callback(success, idealOrder.length, nMoves)
       return
     }
 
@@ -114,8 +134,9 @@ function rearrange (curOrder, idealOrder, callback) {
         console.log('Tab ' + idealHeadId + ' was moved to ' + index)
         orderedIds.add(idealHeadId)
         headIndex++
+        nMoves++
         step()
-      }, onError)
+      }, onRearrangeError)
     } else {
       const index = tailIndex
       const moving = tabs.move(idealTailId, {index})
@@ -123,8 +144,9 @@ function rearrange (curOrder, idealOrder, callback) {
         console.log('Tab ' + idealTailId + ' was moved to ' + index)
         orderedIds.add(idealTailId)
         tailIndex--
+        nMoves++
         step()
-      }, onError)
+      }, onRearrangeError)
     }
   }
 
@@ -134,7 +156,7 @@ function rearrange (curOrder, idealOrder, callback) {
 // タブのパラメータから順番を判定するキーを取り出す関数を受け取り、
 // タブをソートする関数をつくる
 function makeSorter (comparator) {
-  return () => {
+  return (callback) => {
     const querying = tabs.query({currentWindow: true})
     querying.then((tabList) => {
       // 現在の並び順
@@ -153,25 +175,71 @@ function makeSorter (comparator) {
       unpinnedIdealOrder.sort(comparator)
       const idealOrder = curOrder.slice(0, firstUnpinnedIndex).concat(unpinnedIdealOrder)
 
-      const start = new Date()
-      rearrange(curOrder, idealOrder, () => console.log('Rearrange took ' + (new Date() - start) / 1000 + ' seconds'))
-      // 以下のコードはタブが多いと固まる場合がある
+      rearrange(curOrder, idealOrder, callback)
+      // // 以下のコードはタブが多いと固まる場合がある
       // const idealIds = idealOrder.map((tab) => tab.id)
       // const moving = tabs.move(idealIds, {index: 0})
-      // const start = new Date()
-      // moving.then(() => console.log('Rearrange took ' + (new Date() - start) / 1000 + ' seconds'), onError)
-    }, onError)
+      // moving.then(() => {
+      //   const success = true
+      //   callback(success, idealOrder.length, -1)
+      // }, (error) => {
+      //   onError(error)
+      //   const success = false
+      //   callback(success, idealOrder.length, -1)
+      // })
+    }, (error) => {
+      onError(error)
+      const success = false
+      callback(success, -1, -1)
+    })
   }
+}
+
+function getResultMessage (success, seconds, nTabs, nMoveTabs) {
+  const key = (success ? 'successMessage' : 'failureMessage')
+  return i18n.getMessage(key, [seconds, nTabs, nMoveTabs])
+}
+
+function sort (comparator) {
+  const start = new Date()
+
+  if (!notificationOn) {
+    makeSorter(comparator)((success, nTabs, nMoveTabs) => {
+      const seconds = (new Date() - start) / 1000
+      const message = getResultMessage(success, seconds, nTabs, nMoveTabs)
+      console.log(message)
+    })
+    return
+  }
+
+  const creatingStart = notifications.create(NOTIFICATION_ID, {
+    'type': 'basic',
+    'title': NOTIFICATION_ID,
+    message: LABEL_SORTING
+  })
+  creatingStart.then(() => {
+    makeSorter(comparator)((success, nTabs, nMoveTabs) => {
+      const seconds = (new Date() - start) / 1000
+      const message = getResultMessage(success, seconds, nTabs, nMoveTabs)
+      console.log(message)
+      const creatingEnd = notifications.create(NOTIFICATION_ID, {
+        'type': 'basic',
+        'title': NOTIFICATION_ID,
+        message
+      })
+      creatingEnd.then(() => console.log('End'), onError)
+    })
+  }, onError)
 }
 
 contextMenus.onClicked.addListener((info, tab) => {
   switch (info.menuItemId) {
     case 'url': {
-      makeSorter((tab1, tab2) => tab1.url.localeCompare(tab2.url))()
+      sort((tab1, tab2) => tab1.url.localeCompare(tab2.url))
       break
     }
     case 'title': {
-      makeSorter((tab1, tab2) => tab1.title.localeCompare(tab2.title))()
+      sort((tab1, tab2) => tab1.title.localeCompare(tab2.title))
       break
     }
   }

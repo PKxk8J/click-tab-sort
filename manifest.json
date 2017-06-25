@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "name": "ClickTabSort",
+  "name": "__MSG_name__",
   "version": "2.1.1",
   "description": "Sort tabs from right click menu on tabs.\n\nYou can sort tabs by URL or title.\nPinned tabs are not sorted.\n\nIn options, you can select items displayed on menu.",
   "applications": {
@@ -12,7 +12,8 @@
   "permissions": [
     "tabs",
     "contextMenus",
-    "storage"
+    "storage",
+    "notifications"
   ],
   "background": {
     "scripts": [

@@ -1,4 +1,7 @@
 {
+  "name": {
+    "message": "ClickTabSort"
+  },
   "sort": {
     "message": "Sort"
   },
@@ -11,7 +14,44 @@
   "title": {
     "message": "Title"
   },
+  "notification": {
+    "message": "Notification"
+  },
+  "menuItem": {
+    "message": "Menu Items"
+  },
   "save": {
     "message": "Save"
+  },
+  "sorting": {
+    "message": "Sorting..."
+  },
+  "successMessage": {
+    "message": "Completed in $TIME$ seconds.\n$MOVED$ of $ALL$ tabs were moved.",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      },
+      "all": {
+        "content": "$2"
+      },
+      "moved": {
+        "content": "$3"
+      }
+    }
+  },
+  "failureMessage": {
+    "message": "Failed in $TIME$ seconds.\n$MOVED$ of $ALL$ tabs were moved.",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      },
+      "all": {
+        "content": "$2"
+      },
+      "moved": {
+        "content": "$3"
+      }
+    }
   }
 }
