@@ -12,6 +12,13 @@ const LABEL_SORTING = i18n.getMessage('sorting')
 
 let notificationOn = false
 
+const DEBUG = i18n.getMessage('debug')
+function debug (message) {
+  if (DEBUG === 'debug') {
+    console.log(message)
+  }
+}
+
 function onError (error) {
   console.error('Error: ' + error)
 }
@@ -22,7 +29,7 @@ function addMenuItem (id, title, parentId) {
     title,
     contexts: ['tab'],
     parentId
-  }, () => console.log('Added ' + title + ' menu item'))
+  }, () => debug('Added ' + title + ' menu item'))
 }
 
 function changeMenu (result) {
@@ -31,7 +38,7 @@ function changeMenu (result) {
   // 一旦、全削除してから追加する
   const removing = contextMenus.removeAll()
   removing.then(() => {
-    console.log('Clear menu items')
+    debug('Clear menu items')
 
     if (urlOn && titleOn) {
       addMenuItem('sort', LABEL_SORT)
@@ -134,7 +141,7 @@ function rearrange (curOrder, idealOrder, callback) {
       const index = headIndex
       const moving = tabs.move(idealHeadId, {index})
       moving.then(() => {
-        console.log('Tab ' + idealHeadId + ' was moved to ' + index)
+        debug('Tab ' + idealHeadId + ' was moved to ' + index)
         orderedIds.add(idealHeadId)
         headIndex++
         nMoves++
@@ -144,7 +151,7 @@ function rearrange (curOrder, idealOrder, callback) {
       const index = tailIndex
       const moving = tabs.move(idealTailId, {index})
       moving.then(() => {
-        console.log('Tab ' + idealTailId + ' was moved to ' + index)
+        debug('Tab ' + idealTailId + ' was moved to ' + index)
         orderedIds.add(idealTailId)
         tailIndex--
         nMoves++
@@ -210,7 +217,7 @@ function sort (comparator) {
     makeSorter(comparator)((success, nTabs, nMoveTabs) => {
       const seconds = (new Date() - start) / 1000
       const message = getResultMessage(success, seconds, nTabs, nMoveTabs)
-      console.log(message)
+      debug(message)
     })
     return
   }
@@ -224,13 +231,13 @@ function sort (comparator) {
     makeSorter(comparator)((success, nTabs, nMoveTabs) => {
       const seconds = (new Date() - start) / 1000
       const message = getResultMessage(success, seconds, nTabs, nMoveTabs)
-      console.log(message)
+      debug(message)
       const creatingEnd = notifications.create(NOTIFICATION_ID, {
         'type': 'basic',
         'title': NOTIFICATION_ID,
         message
       })
-      creatingEnd.then(() => console.log('End'), onError)
+      creatingEnd.then(() => debug('End'), onError)
     })
   }, onError)
 }

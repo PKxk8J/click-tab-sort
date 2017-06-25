@@ -9,6 +9,13 @@ const LABEL_TITLE = i18n.getMessage('title')
 const LABEL_NOTIFICATION = i18n.getMessage('notification')
 const LABEL_SAVE = i18n.getMessage('save')
 
+const DEBUG = i18n.getMessage('debug')
+function debug (message) {
+  if (DEBUG === 'debug') {
+    console.log(message)
+  }
+}
+
 document.getElementById('label_menu_item').innerText = LABEL_MENU_ITEM
 document.getElementById('label_url').innerText = LABEL_URL
 document.getElementById('label_title').innerText = LABEL_TITLE
@@ -44,7 +51,7 @@ function save (e) {
     title: titleOn,
     notification: notificationOn
   })
-  setting.then(() => console.log('Saved'), onError)
+  setting.then(() => debug('Saved'), onError)
 }
 
 document.addEventListener('DOMContentLoaded', restore)
