@@ -9,9 +9,9 @@ const LABEL_TITLE = i18n.getMessage('title')
 const LABEL_NOTIFICATION = i18n.getMessage('notification')
 const LABEL_SAVE = i18n.getMessage('save')
 
-const DEBUG = i18n.getMessage('debug')
+const DEBUG = (i18n.getMessage('debug') === 'debug')
 function debug (message) {
-  if (DEBUG === 'debug') {
+  if (DEBUG) {
     console.log(message)
   }
 }
