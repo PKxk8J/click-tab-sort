@@ -12,9 +12,9 @@ const LABEL_SORTING = i18n.getMessage('sorting')
 
 let notificationOn = false
 
-const DEBUG = i18n.getMessage('debug')
+const DEBUG = (i18n.getMessage('debug') === 'debug')
 function debug (message) {
-  if (DEBUG === 'debug') {
+  if (DEBUG) {
     console.log(message)
   }
 }
