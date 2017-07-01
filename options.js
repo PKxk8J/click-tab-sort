@@ -3,54 +3,67 @@
 const { i18n, storage } = browser
 const storageArea = storage.sync
 
-const LABEL_MENU_ITEM = i18n.getMessage('menuItem')
-const LABEL_URL = i18n.getMessage('url')
-const LABEL_TITLE = i18n.getMessage('title')
-const LABEL_NOTIFICATION = i18n.getMessage('notification')
-const LABEL_SAVE = i18n.getMessage('save')
+const KEY_DEBUG = 'debug'
 
-const DEBUG = (i18n.getMessage('debug') === 'debug')
+const KEY_URL = 'url'
+const KEY_URL_REV = 'urlReverse'
+const KEY_TITLE = 'title'
+const KEY_TITLE_REV = 'titleReverse'
+const KEY_RAND = 'random'
+const KEY_NOTIFICATION = 'notification'
+
+const KEY_MENU_ITEM = 'menuItem'
+const KEY_SAVE = 'save'
+
+const DEBUG = (i18n.getMessage(KEY_DEBUG) === 'debug')
 function debug (message) {
   if (DEBUG) {
     console.log(message)
   }
 }
 
-document.getElementById('label_menu_item').innerText = LABEL_MENU_ITEM
-document.getElementById('label_url').innerText = LABEL_URL
-document.getElementById('label_title').innerText = LABEL_TITLE
-document.getElementById('label_save').innerText = LABEL_SAVE
-document.getElementById('label_notification').innerText = LABEL_NOTIFICATION
-
 function onError (error) {
   console.error('Error: ' + error)
 }
 
+// bool が undefined でなく false のときだけ false になるように
+function falseIffFalse (bool) {
+  if (typeof bool === 'undefined') {
+    return true
+  }
+  return bool
+}
+
+[KEY_MENU_ITEM, KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_RAND, KEY_NOTIFICATION, KEY_SAVE].forEach((key) => {
+  document.getElementById('label_' + key).innerText = i18n.getMessage(key)
+})
+
+// 現在の設定を表示する
 function restore () {
   const getting = storageArea.get()
   getting.then((result) => {
-    const {
-      url: urlOn = true,
-      title: titleOn = true,
-      notification: notificationOn = false
-    } = result
-    document.getElementById('url').checked = urlOn
-    document.getElementById('title').checked = titleOn
-    document.getElementById('notification').checked = notificationOn
+    const flags = {
+      [KEY_URL]: falseIffFalse(result[KEY_URL]),
+      [KEY_URL_REV]: result[KEY_URL_REV],
+      [KEY_TITLE]: falseIffFalse(result[KEY_TITLE]),
+      [KEY_TITLE_REV]: result[KEY_TITLE_REV],
+      [KEY_RAND]: result[KEY_RAND],
+      [KEY_NOTIFICATION]: result[KEY_NOTIFICATION]
+    }
+    Object.keys(flags).forEach((key) => {
+      document.getElementById(key).checked = flags[key]
+    })
   }, onError)
 }
 
 function save (e) {
   e.preventDefault()
 
-  const urlOn = document.getElementById('url').checked
-  const titleOn = document.getElementById('title').checked
-  const notificationOn = document.getElementById('notification').checked
-  const setting = storageArea.set({
-    url: urlOn,
-    title: titleOn,
-    notification: notificationOn
+  const result = {}
+  ;[KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_RAND, KEY_NOTIFICATION].forEach((key) => {
+    result[key] = document.getElementById(key).checked
   })
+  const setting = storageArea.set(result)
   setting.then(() => debug('Saved'), onError)
 }
 

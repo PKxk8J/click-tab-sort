@@ -13,10 +13,19 @@
     "message": "Sort by $1"
   },
   "url": {
-    "message": "URL"
+    "message": "URL (A-Z)"
+  },
+  "urlReverse": {
+    "message": "URL (Z-A)"
   },
   "title": {
-    "message": "Title"
+    "message": "Title (A-Z)"
+  },
+  "titleReverse": {
+    "message": "Title (Z-A)"
+  },
+  "random": {
+    "message": "Random"
   },
   "notification": {
     "message": "Notification"

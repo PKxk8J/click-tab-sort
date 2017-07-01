@@ -3,16 +3,23 @@
 const { contextMenus, i18n, notifications, storage, tabs } = browser
 const storageArea = storage.sync
 
-const NOTIFICATION_ID = i18n.getMessage('name')
+const KEY_DEBUG = 'debug'
 
-const LABEL_SORT = i18n.getMessage('sort')
-const LABEL_URL = i18n.getMessage('url')
-const LABEL_TITLE = i18n.getMessage('title')
-const LABEL_SORTING = i18n.getMessage('sorting')
+const KEY_URL = 'url'
+const KEY_URL_REV = 'urlReverse'
+const KEY_TITLE = 'title'
+const KEY_TITLE_REV = 'titleReverse'
+const KEY_RAND = 'random'
+const KEY_NOTIFICATION = 'notification'
 
-let notificationOn = false
+const KEY_NAME = 'name'
+const KEY_SORT = 'sort'
+const KEY_SORTING = 'sorting'
 
-const DEBUG = (i18n.getMessage('debug') === 'debug')
+const NOTIFICATION_ID = i18n.getMessage(KEY_NAME)
+let notification = false
+
+const DEBUG = (i18n.getMessage(KEY_DEBUG) === 'debug')
 function debug (message) {
   if (DEBUG) {
     console.log(message)
@@ -23,6 +30,15 @@ function onError (error) {
   console.error('Error: ' + error)
 }
 
+// bool が undefined でなく false のときだけ false になるように
+function falseIffFalse (bool) {
+  if (typeof bool === 'undefined') {
+    return true
+  }
+  return bool
+}
+
+// 右クリックメニューに項目を追加する
 function addMenuItem (id, title, parentId) {
   contextMenus.create({
     id,
@@ -32,29 +48,54 @@ function addMenuItem (id, title, parentId) {
   }, () => debug('Added ' + title + ' menu item'))
 }
 
+// 右クリックメニューの変更
 function changeMenu (result) {
-  const { url: urlOn = true, title: titleOn = true } = result
+  const flags = [
+    { key: KEY_URL, on: falseIffFalse(result[KEY_URL]) },
+    { key: KEY_URL_REV, on: result[KEY_URL_REV] },
+    { key: KEY_TITLE, on: falseIffFalse(result[KEY_TITLE]) },
+    { key: KEY_TITLE_REV, on: result[KEY_TITLE_REV] },
+    { key: KEY_RAND, on: result[KEY_RAND] }
+  ]
 
   // 一旦、全削除してから追加する
   const removing = contextMenus.removeAll()
   removing.then(() => {
     debug('Clear menu items')
 
-    if (urlOn && titleOn) {
-      addMenuItem('sort', LABEL_SORT)
-      addMenuItem('url', LABEL_URL, 'sort')
-      addMenuItem('title', LABEL_TITLE, 'sort')
-    } else if (urlOn) {
-      addMenuItem('url', i18n.getMessage('sortBy', LABEL_URL))
-    } else if (titleOn) {
-      addMenuItem('title', i18n.getMessage('sortBy', LABEL_TITLE))
+    let count = 0
+    let sample
+    for (let flag of flags) {
+      if (flag.on) {
+        count++
+        sample = flag
+      }
+    }
+
+    switch (count) {
+      case 0: {
+        break
+      }
+      case 1: {
+        // 1 つだけのときはフラットメニュー
+        addMenuItem(sample.key, i18n.getMessage('sortBy', i18n.getMessage(sample.key)))
+        break
+      }
+      default: {
+        addMenuItem(KEY_SORT, i18n.getMessage(KEY_SORT))
+        for (let flag of flags) {
+          if (flag.on) {
+            addMenuItem(flag.key, i18n.getMessage(flag.key), KEY_SORT)
+          }
+        }
+      }
     }
   }, onError)
 }
 
 // 設定を反映させる
 function applySetting (result) {
-  notificationOn = result.notification
+  notification = result[KEY_NOTIFICATION]
   changeMenu(result)
 }
 
@@ -62,11 +103,8 @@ function applySetting (result) {
 const getting = storageArea.get()
 getting.then(applySetting, onError)
 storage.onChanged.addListener((changes, area) => {
-  const result = {
-    url: changes.url.newValue,
-    title: changes.title.newValue,
-    notification: changes.notification.newValue
-  }
+  const result = {}
+  Object.keys(changes).forEach((key) => { result[key] = changes[key].newValue })
   applySetting(result)
 })
 
@@ -213,7 +251,7 @@ function getResultMessage (success, seconds, nTabs, nMoveTabs) {
 function sort (comparator) {
   const start = new Date()
 
-  if (!notificationOn) {
+  if (!notification) {
     makeSorter(comparator)((success, nTabs, nMoveTabs) => {
       const seconds = (new Date() - start) / 1000
       const message = getResultMessage(success, seconds, nTabs, nMoveTabs)
@@ -225,7 +263,7 @@ function sort (comparator) {
   const creatingStart = notifications.create(NOTIFICATION_ID, {
     'type': 'basic',
     'title': NOTIFICATION_ID,
-    message: LABEL_SORTING
+    message: i18n.getMessage(KEY_SORTING)
   })
   creatingStart.then(() => {
     makeSorter(comparator)((success, nTabs, nMoveTabs) => {
@@ -244,12 +282,31 @@ function sort (comparator) {
 
 contextMenus.onClicked.addListener((info, tab) => {
   switch (info.menuItemId) {
-    case 'url': {
+    case KEY_URL: {
       sort((tab1, tab2) => tab1.url.localeCompare(tab2.url))
       break
     }
-    case 'title': {
+    case KEY_URL_REV: {
+      sort((tab1, tab2) => -tab1.url.localeCompare(tab2.url))
+      break
+    }
+    case KEY_TITLE: {
       sort((tab1, tab2) => tab1.title.localeCompare(tab2.title))
+      break
+    }
+    case KEY_TITLE_REV: {
+      sort((tab1, tab2) => -tab1.title.localeCompare(tab2.title))
+      break
+    }
+    case KEY_RAND: {
+      const random = []
+      sort((tab1, tab2) => {
+        const index = Math.max(tab1.index, tab2.index)
+        while (random.length <= index) {
+          random.push(Math.random())
+        }
+        return random[tab1.index] - random[tab2.index]
+      })
       break
     }
   }
