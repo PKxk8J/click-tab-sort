@@ -6,7 +6,10 @@ const storageArea = storage.sync
 const KEY_DEBUG = 'debug'
 
 const KEY_URL = 'url'
+const KEY_URL_REV = 'urlReverse'
 const KEY_TITLE = 'title'
+const KEY_TITLE_REV = 'titleReverse'
+const KEY_RAND = 'random'
 const KEY_NOTIFICATION = 'notification'
 
 const KEY_NAME = 'name'
@@ -49,7 +52,9 @@ function addMenuItem (id, title, parentId) {
 function changeMenu (result) {
   const flags = [
     { key: KEY_URL, on: falseIffFalse(result[KEY_URL]) },
+    { key: KEY_URL_REV, on: result[KEY_URL_REV] },
     { key: KEY_TITLE, on: falseIffFalse(result[KEY_TITLE]) },
+    { key: KEY_TITLE_REV, on: result[KEY_TITLE_REV] },
     { key: KEY_RAND, on: result[KEY_RAND] }
   ]
 
@@ -281,8 +286,27 @@ contextMenus.onClicked.addListener((info, tab) => {
       sort((tab1, tab2) => tab1.url.localeCompare(tab2.url))
       break
     }
+    case KEY_URL_REV: {
+      sort((tab1, tab2) => -tab1.url.localeCompare(tab2.url))
+      break
+    }
     case KEY_TITLE: {
       sort((tab1, tab2) => tab1.title.localeCompare(tab2.title))
+      break
+    }
+    case KEY_TITLE_REV: {
+      sort((tab1, tab2) => -tab1.title.localeCompare(tab2.title))
+      break
+    }
+    case KEY_RAND: {
+      const random = []
+      sort((tab1, tab2) => {
+        const index = Math.max(tab1.index, tab2.index)
+        while (random.length <= index) {
+          random.push(Math.random())
+        }
+        return random[tab1.index] - random[tab2.index]
+      })
       break
     }
   }

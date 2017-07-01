@@ -6,7 +6,10 @@ const storageArea = storage.sync
 const KEY_DEBUG = 'debug'
 
 const KEY_URL = 'url'
+const KEY_URL_REV = 'urlReverse'
 const KEY_TITLE = 'title'
+const KEY_TITLE_REV = 'titleReverse'
+const KEY_RAND = 'random'
 const KEY_NOTIFICATION = 'notification'
 
 const KEY_MENU_ITEM = 'menuItem'
@@ -31,7 +34,7 @@ function falseIffFalse (bool) {
   return bool
 }
 
-[KEY_MENU_ITEM, KEY_URL, KEY_TITLE, KEY_NOTIFICATION, KEY_SAVE].forEach((key) => {
+[KEY_MENU_ITEM, KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_RAND, KEY_NOTIFICATION, KEY_SAVE].forEach((key) => {
   document.getElementById('label_' + key).innerText = i18n.getMessage(key)
 })
 
@@ -41,7 +44,10 @@ function restore () {
   getting.then((result) => {
     const flags = {
       [KEY_URL]: falseIffFalse(result[KEY_URL]),
+      [KEY_URL_REV]: result[KEY_URL_REV],
       [KEY_TITLE]: falseIffFalse(result[KEY_TITLE]),
+      [KEY_TITLE_REV]: result[KEY_TITLE_REV],
+      [KEY_RAND]: result[KEY_RAND],
       [KEY_NOTIFICATION]: result[KEY_NOTIFICATION]
     }
     Object.keys(flags).forEach((key) => {
@@ -54,7 +60,7 @@ function save (e) {
   e.preventDefault()
 
   const result = {}
-  ;[KEY_URL, KEY_TITLE, KEY_NOTIFICATION].forEach((key) => {
+  ;[KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_RAND, KEY_NOTIFICATION].forEach((key) => {
     result[key] = document.getElementById(key).checked
   })
   const setting = storageArea.set(result)

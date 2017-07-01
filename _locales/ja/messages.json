@@ -6,7 +6,13 @@
     "message": "$1でソート"
   },
   "title": {
-    "message": "タイトル"
+    "message": "タイトル (A-Z)"
+  },
+  "titleReverse": {
+    "message": "タイトル (Z-A)"
+  },
+  "random": {
+    "message": "ランダム"
   },
   "notification": {
     "message": "通知"
