@@ -14,6 +14,7 @@ const KEY_NOTIFICATION = 'notification'
 
 const KEY_NAME = 'name'
 const KEY_SORT = 'sort'
+const KEY_SORT_BY = 'sortBy'
 const KEY_SORTING = 'sorting'
 
 const NOTIFICATION_ID = i18n.getMessage(KEY_NAME)
@@ -84,7 +85,7 @@ function changeMenu (result) {
       }
       case 1: {
         // 1 つだけのときはフラットメニュー
-        addMenuItem(sample.key, i18n.getMessage('sortBy', i18n.getMessage(sample.key)))
+        addMenuItem(sample.key, i18n.getMessage(KEY_SORT_BY, i18n.getMessage(sample.key)))
         break
       }
       default: {
