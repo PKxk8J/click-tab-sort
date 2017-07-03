@@ -1,6 +1,6 @@
 'use strict'
 
-const { contextMenus, i18n, notifications, storage, tabs } = browser
+const { contextMenus, i18n, notifications, runtime, storage, tabs } = browser
 const storageArea = storage.sync
 
 const KEY_DEBUG = 'debug'
@@ -45,7 +45,13 @@ function addMenuItem (id, title, parentId) {
     title,
     contexts: ['tab'],
     parentId
-  }, () => debug('Added ' + title + ' menu item'))
+  }, () => {
+    if (runtime.lastError) {
+      onError(runtime.lastError)
+    } else {
+      debug('Added ' + title + ' menu item')
+    }
+  })
 }
 
 // 右クリックメニューの変更
