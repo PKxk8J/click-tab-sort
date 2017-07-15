@@ -54,17 +54,6 @@
     }
   },
   "failureMessage": {
-    "message": "Sorting tabs failed in $TIME$ seconds.\n$MOVED$ of $ALL$ tabs were moved.",
-    "placeholders": {
-      "time": {
-        "content": "$1"
-      },
-      "all": {
-        "content": "$2"
-      },
-      "moved": {
-        "content": "$3"
-      }
-    }
+    "message": "Sorting tabs failed.\n$1"
   }
 }
