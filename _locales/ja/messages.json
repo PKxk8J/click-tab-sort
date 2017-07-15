@@ -41,17 +41,6 @@
     }
   },
   "failureMessage": {
-    "message": "ソート失敗: $TIME$秒\n$ALL$個中$MOVED$個のタブを移動",
-    "placeholders": {
-      "time": {
-        "content": "$1"
-      },
-      "all": {
-        "content": "$2"
-      },
-      "moved": {
-        "content": "$3"
-      }
-    }
+    "message": "ソート失敗\n$1"
   }
 }
