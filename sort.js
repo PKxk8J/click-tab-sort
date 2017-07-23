@@ -106,19 +106,6 @@ async function applySetting (result) {
   await changeMenu(result)
 }
 
-// リアルタイムで設定を反映させる
-storage.onChanged.addListener((changes, area) => (async function () {
-  const result = {}
-  Object.keys(changes).forEach((key) => { result[key] = changes[key].newValue })
-  await applySetting(result)
-})().catch(onError))
-
-// 初期化
-;(async function () {
-  const result = await storageArea.get()
-  await applySetting(result)
-})().catch(onError)
-
 // 並べ替える
 async function rearrange (curOrder, idealOrder) {
   const idToIdealIndex = new Map()
@@ -191,8 +178,8 @@ async function rearrange (curOrder, idealOrder) {
 }
 
 // タブをソートする
-async function sort (comparator) {
-  const tabList = await tabs.query({currentWindow: true})
+async function sort (windowId, comparator) {
+  const tabList = await tabs.query({windowId})
 
   // 現在の並び順
   tabList.sort((tab1, tab2) => tab1.index - tab2.index)
@@ -226,13 +213,13 @@ async function notify (message) {
 }
 
 // 前後処理で挟む
-async function wrapSort (comparator) {
+async function wrapSort (windowId, comparator) {
   if (notification) {
     await notify(i18n.getMessage(KEY_SORTING))
   }
 
   const start = new Date()
-  const {all, moved} = await sort(comparator)
+  const {all, moved} = await sort(windowId, comparator)
   const seconds = (new Date() - start) / 1000
   const message = i18n.getMessage(KEY_SUCCESS_MESSAGE, [seconds, all, moved])
 
@@ -242,40 +229,53 @@ async function wrapSort (comparator) {
   }
 }
 
-// 右クリックメニューからの入力を処理
-contextMenus.onClicked.addListener((info, tab) => (async function () {
-  switch (info.menuItemId) {
-    case KEY_URL: {
-      await wrapSort((tab1, tab2) => tab1.url.localeCompare(tab2.url))
-      break
+// 初期化
+(async function () {
+  // リアルタイムで設定を反映させる
+  storage.onChanged.addListener((changes, area) => (async function () {
+    const result = {}
+    Object.keys(changes).forEach((key) => { result[key] = changes[key].newValue })
+    await applySetting(result)
+  })().catch(onError))
+
+  // 右クリックメニューからの入力を処理
+  contextMenus.onClicked.addListener((info, tab) => (async function () {
+    switch (info.menuItemId) {
+      case KEY_URL: {
+        await wrapSort(tab.windowId, (tab1, tab2) => tab1.url.localeCompare(tab2.url))
+        break
+      }
+      case KEY_URL_REV: {
+        await wrapSort(tab.windowId, (tab1, tab2) => -tab1.url.localeCompare(tab2.url))
+        break
+      }
+      case KEY_TITLE: {
+        await wrapSort(tab.windowId, (tab1, tab2) => tab1.title.localeCompare(tab2.title))
+        break
+      }
+      case KEY_TITLE_REV: {
+        await wrapSort(tab.windowId, (tab1, tab2) => -tab1.title.localeCompare(tab2.title))
+        break
+      }
+      case KEY_RAND: {
+        const random = []
+        await wrapSort(tab.windowId, (tab1, tab2) => {
+          const index = Math.max(tab1.index, tab2.index)
+          while (random.length <= index) {
+            random.push(Math.random())
+          }
+          return random[tab1.index] - random[tab2.index]
+        })
+        break
+      }
     }
-    case KEY_URL_REV: {
-      await wrapSort((tab1, tab2) => -tab1.url.localeCompare(tab2.url))
-      break
+  })().catch((e) => {
+    onError(e)
+    if (notification) {
+      notify(i18n.getMessage(KEY_FAILURE_MESSAGE, e)).catch(onError)
     }
-    case KEY_TITLE: {
-      await wrapSort((tab1, tab2) => tab1.title.localeCompare(tab2.title))
-      break
-    }
-    case KEY_TITLE_REV: {
-      await wrapSort((tab1, tab2) => -tab1.title.localeCompare(tab2.title))
-      break
-    }
-    case KEY_RAND: {
-      const random = []
-      await wrapSort((tab1, tab2) => {
-        const index = Math.max(tab1.index, tab2.index)
-        while (random.length <= index) {
-          random.push(Math.random())
-        }
-        return random[tab1.index] - random[tab2.index]
-      })
-      break
-    }
-  }
-})().catch((e) => {
-  onError(e)
-  if (notification) {
-    notify(i18n.getMessage(KEY_FAILURE_MESSAGE, e)).catch(onError)
-  }
-}))
+  }))
+
+  const result = await storageArea.get()
+  await applySetting(result)
+})().catch(onError)
