@@ -5,11 +5,17 @@
   "sortBy": {
     "message": "$1でソート"
   },
+  "url": {
+    "message": "URL（A-Z）"
+  },
+  "urlReverse": {
+    "message": "URL（Z-A）"
+  },
   "title": {
-    "message": "タイトル (A-Z)"
+    "message": "タイトル（A-Z）"
   },
   "titleReverse": {
-    "message": "タイトル (Z-A)"
+    "message": "タイトル（Z-A）"
   },
   "random": {
     "message": "ランダム"
