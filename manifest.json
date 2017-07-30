@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "__MSG_name__",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "Sort tabs from the right click menu on tabs.\n\nYou can sort tabs by URL or title.\nPinned tabs are not sorted.\n\nIn options, you can select items displayed on the menu.",
   "applications": {
     "gecko": {
