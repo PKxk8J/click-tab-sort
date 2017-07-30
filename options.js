@@ -10,10 +10,24 @@ const KEY_URL_REV = 'urlReverse'
 const KEY_TITLE = 'title'
 const KEY_TITLE_REV = 'titleReverse'
 const KEY_RAND = 'random'
-const KEY_NOTIFICATION = 'notification'
 
 const KEY_MENU_ITEM = 'menuItem'
+const KEY_NOTIFICATION = 'notification'
+
 const KEY_SAVE = 'save'
+
+const MENU_ITEM_KEYS = [KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_RAND]
+const LABEL_KEYS = MENU_ITEM_KEYS.concat([KEY_MENU_ITEM, KEY_NOTIFICATION, KEY_SAVE])
+
+/*
+ * {
+ *    "menuItem": ["url", "title", ...],
+ *    "notification": true
+ * }
+ */
+
+const DEFAULT_MENU_ITEM = [KEY_URL, KEY_TITLE]
+const DEFAULT_NOTIFICATION = false
 
 const DEBUG = (i18n.getMessage(KEY_DEBUG) === 'debug')
 function debug (message) {
@@ -26,52 +40,51 @@ function onError (error) {
   console.error(error)
 }
 
-// bool が undefined でなく false のときだけ false になるように
-function falseIffFalse (bool) {
-  if (typeof bool === 'undefined') {
-    return true
-  }
-  return bool
-}
-
 // 現在の設定を表示する
 async function restore () {
-  const result = await storageArea.get()
-  debug('Loaded ' + JSON.stringify(result))
+  const data = await storageArea.get()
+  debug('Loaded ' + JSON.stringify(data))
 
-  const flags = {
-    [KEY_URL]: falseIffFalse(result[KEY_URL]),
-    [KEY_URL_REV]: result[KEY_URL_REV],
-    [KEY_TITLE]: falseIffFalse(result[KEY_TITLE]),
-    [KEY_TITLE_REV]: result[KEY_TITLE_REV],
-    [KEY_RAND]: result[KEY_RAND],
-    [KEY_NOTIFICATION]: result[KEY_NOTIFICATION]
-  }
-  Object.keys(flags).forEach((key) => {
-    document.getElementById(key).checked = flags[key]
+  const {
+    [KEY_MENU_ITEM]: menuItem = DEFAULT_MENU_ITEM,
+    [KEY_NOTIFICATION]: notification = DEFAULT_NOTIFICATION
+  } = data
+
+  const menuItemSet = new Set(menuItem)
+  MENU_ITEM_KEYS.forEach((key) => {
+    document.getElementById(key).checked = menuItemSet.has(key)
   })
+
+  document.getElementById(KEY_NOTIFICATION).checked = notification
 }
 
 // 設定を保存する
 async function save () {
-  const result = {}
-  ;[KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_RAND, KEY_NOTIFICATION].forEach((key) => {
-    result[key] = document.getElementById(key).checked
+  const menuItem = []
+  MENU_ITEM_KEYS.forEach((key) => {
+    if (document.getElementById(key).checked) {
+      menuItem.push(key)
+    }
   })
 
-  await storageArea.set(result)
-  debug('Saved ' + JSON.stringify(result))
+  const notification = document.getElementById(KEY_NOTIFICATION).checked
+
+  const data = {
+    [KEY_MENU_ITEM]: menuItem,
+    [KEY_NOTIFICATION]: notification
+  }
+  // 古い形式のデータを消す
+  await storageArea.clear()
+  await storageArea.set(data)
+  debug('Saved ' + JSON.stringify(data))
 }
 
 // 初期化
 (async function () {
-  [KEY_MENU_ITEM, KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_RAND, KEY_NOTIFICATION, KEY_SAVE].forEach((key) => {
+  LABEL_KEYS.forEach((key) => {
     document.getElementById('label_' + key).innerText = i18n.getMessage(key)
   })
 
   document.addEventListener('DOMContentLoaded', () => restore().catch(onError))
-  document.getElementById('form').addEventListener('submit', (e) => (async function () {
-    e.preventDefault()
-    await save()
-  })().catch(onError))
+  document.getElementById('save').addEventListener('click', (e) => save().catch(onError))
 })().catch(onError)
