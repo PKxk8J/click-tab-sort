@@ -54,5 +54,8 @@
   },
   "failureMessage": {
     "message": "タブをソート失敗\n$1"
+  },
+  "menuItemDescription": {
+    "message": "開いた日時は Firefox を起動する度にリセットされます。"
   }
 }
