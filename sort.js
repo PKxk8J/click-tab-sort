@@ -9,6 +9,8 @@ const KEY_URL = 'url'
 const KEY_URL_REV = 'urlReverse'
 const KEY_TITLE = 'title'
 const KEY_TITLE_REV = 'titleReverse'
+const KEY_ID = 'id'
+const KEY_ID_REV = 'idReverse'
 const KEY_RAND = 'random'
 
 const KEY_MENU_ITEM = 'menuItem'
@@ -215,7 +217,7 @@ async function wrapSort (windowId, comparator) {
   // リアルタイムで設定を反映させる
   storage.onChanged.addListener((changes, area) => (async function () {
     const menuItem = changes[KEY_MENU_ITEM]
-    if (menuItem) {
+    if (menuItem && menuItem.newValue) {
       await changeMenu(menuItem.newValue)
     }
   })().catch(onError))
@@ -228,7 +230,7 @@ async function wrapSort (windowId, comparator) {
         break
       }
       case KEY_URL_REV: {
-        await wrapSort(tab.windowId, (tab1, tab2) => -tab1.url.localeCompare(tab2.url))
+        await wrapSort(tab.windowId, (tab1, tab2) => tab2.url.localeCompare(tab1.url))
         break
       }
       case KEY_TITLE: {
@@ -236,7 +238,15 @@ async function wrapSort (windowId, comparator) {
         break
       }
       case KEY_TITLE_REV: {
-        await wrapSort(tab.windowId, (tab1, tab2) => -tab1.title.localeCompare(tab2.title))
+        await wrapSort(tab.windowId, (tab1, tab2) => tab2.title.localeCompare(tab1.title))
+        break
+      }
+      case KEY_ID: {
+        await wrapSort(tab.windowId, (tab1, tab2) => tab1.id - tab2.id)
+        break
+      }
+      case KEY_ID_REV: {
+        await wrapSort(tab.windowId, (tab1, tab2) => tab2.id - tab1.id)
         break
       }
       case KEY_RAND: {

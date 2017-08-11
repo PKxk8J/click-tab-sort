@@ -7,10 +7,10 @@
     "message": "ClickTabSort"
   },
   "sort": {
-    "message": "Sort"
+    "message": "Sort Tabs"
   },
   "sortBy": {
-    "message": "Sort by $1"
+    "message": "Sort Tabs by $1"
   },
   "url": {
     "message": "URL (A-Z)"
@@ -23,6 +23,12 @@
   },
   "titleReverse": {
     "message": "Title (Z-A)"
+  },
+  "id": {
+    "message": "Opened Date (Old-New)"
+  },
+  "idReverse": {
+    "message": "Opened Date (New-Old)"
   },
   "random": {
     "message": "Random"
@@ -55,5 +61,8 @@
   },
   "failureMessage": {
     "message": "Sorting tabs failed.\n$1"
+  },
+  "menuItemDescription": {
+    "message": "Opened dates are reset when Firefox starts."
   }
 }

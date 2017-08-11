@@ -1,9 +1,9 @@
 {
   "sort": {
-    "message": "ソート"
+    "message": "タブをソート"
   },
   "sortBy": {
-    "message": "$1でソート"
+    "message": "$1でタブをソート"
   },
   "url": {
     "message": "URL（A-Z）"
@@ -16,6 +16,12 @@
   },
   "titleReverse": {
     "message": "タイトル（Z-A）"
+  },
+  "id": {
+    "message": "開いた日時（Old-New）"
+  },
+  "idReverse": {
+    "message": "開いた日時（New-Old）"
   },
   "random": {
     "message": "ランダム"
@@ -30,10 +36,10 @@
     "message": "保存"
   },
   "sorting": {
-    "message": "ソート中..."
+    "message": "タブをソート中..."
   },
   "successMessage": {
-    "message": "ソート完了: $TIME$秒\n$ALL$個中$MOVED$個のタブを移動",
+    "message": "タブをソート完了: $TIME$秒\n$ALL$個中$MOVED$個のタブを移動",
     "placeholders": {
       "time": {
         "content": "$1"
@@ -47,6 +53,9 @@
     }
   },
   "failureMessage": {
-    "message": "ソート失敗\n$1"
+    "message": "タブをソート失敗\n$1"
+  },
+  "menuItemDescription": {
+    "message": "開いた日時は Firefox を起動する度にリセットされます。"
   }
 }
