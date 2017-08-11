@@ -24,6 +24,12 @@
   "titleReverse": {
     "message": "Title (Z-A)"
   },
+  "id": {
+    "message": "Opened Date (Old-New)"
+  },
+  "idReverse": {
+    "message": "Opened Date (New-Old)"
+  },
   "random": {
     "message": "Random"
   },

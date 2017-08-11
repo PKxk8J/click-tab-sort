@@ -17,6 +17,12 @@
   "titleReverse": {
     "message": "タイトル（Z-A）"
   },
+  "id": {
+    "message": "開いた日時（Old-New）"
+  },
+  "idReverse": {
+    "message": "開いた日時（New-Old）"
+  },
   "random": {
     "message": "ランダム"
   },

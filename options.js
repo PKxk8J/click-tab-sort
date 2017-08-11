@@ -9,6 +9,8 @@ const KEY_URL = 'url'
 const KEY_URL_REV = 'urlReverse'
 const KEY_TITLE = 'title'
 const KEY_TITLE_REV = 'titleReverse'
+const KEY_ID = 'id'
+const KEY_ID_REV = 'idReverse'
 const KEY_RAND = 'random'
 
 const KEY_MENU_ITEM = 'menuItem'
@@ -16,7 +18,7 @@ const KEY_NOTIFICATION = 'notification'
 
 const KEY_SAVE = 'save'
 
-const MENU_ITEM_KEYS = [KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_RAND]
+const MENU_ITEM_KEYS = [KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_ID, KEY_ID_REV, KEY_RAND]
 const LABEL_KEYS = MENU_ITEM_KEYS.concat([KEY_MENU_ITEM, KEY_NOTIFICATION, KEY_SAVE])
 
 /*
