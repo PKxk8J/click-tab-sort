@@ -215,7 +215,7 @@ async function wrapSort (windowId, comparator) {
   // リアルタイムで設定を反映させる
   storage.onChanged.addListener((changes, area) => (async function () {
     const menuItem = changes[KEY_MENU_ITEM]
-    if (menuItem) {
+    if (menuItem && menuItem.newValue) {
       await changeMenu(menuItem.newValue)
     }
   })().catch(onError))
