@@ -7,10 +7,10 @@
     "message": "ClickTabSort"
   },
   "sort": {
-    "message": "Sort"
+    "message": "Sort Tabs"
   },
   "sortBy": {
-    "message": "Sort by $1"
+    "message": "Sort Tabs by $1"
   },
   "url": {
     "message": "URL (A-Z)"
