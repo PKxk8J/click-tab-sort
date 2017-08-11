@@ -228,7 +228,7 @@ async function wrapSort (windowId, comparator) {
         break
       }
       case KEY_URL_REV: {
-        await wrapSort(tab.windowId, (tab1, tab2) => -tab1.url.localeCompare(tab2.url))
+        await wrapSort(tab.windowId, (tab1, tab2) => tab2.url.localeCompare(tab1.url))
         break
       }
       case KEY_TITLE: {
@@ -236,7 +236,7 @@ async function wrapSort (windowId, comparator) {
         break
       }
       case KEY_TITLE_REV: {
-        await wrapSort(tab.windowId, (tab1, tab2) => -tab1.title.localeCompare(tab2.title))
+        await wrapSort(tab.windowId, (tab1, tab2) => tab2.title.localeCompare(tab1.title))
         break
       }
       case KEY_RAND: {
