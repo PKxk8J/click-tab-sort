@@ -64,6 +64,26 @@ function addMenuItem (id, title, parentId) {
   })
 }
 
+// 比較関数の生成関数
+const COMPARATOR_GENERATORS = {
+  [KEY_URL]: () => (tab1, tab2) => tab1.url.localeCompare(tab2.url),
+  [KEY_URL_REV]: () => (tab1, tab2) => tab2.url.localeCompare(tab1.url),
+  [KEY_TITLE]: () => (tab1, tab2) => tab1.title.localeCompare(tab2.title),
+  [KEY_TITLE_REV]: () => (tab1, tab2) => tab2.title.localeCompare(tab1.title),
+  [KEY_ID]: () => (tab1, tab2) => tab1.id - tab2.id,
+  [KEY_ID_REV]: () => (tab1, tab2) => tab2.id - tab1.id,
+  [KEY_RAND]: () => {
+    const random = []
+    return (tab1, tab2) => {
+      const index = Math.max(tab1.index, tab2.index)
+      while (random.length <= index) {
+        random.push(Math.random())
+      }
+      return random[tab1.index] - random[tab2.index]
+    }
+  }
+}
+
 // 右クリックメニューの変更
 async function changeMenu (menuItem) {
   // 一旦、全削除してから追加する
@@ -194,21 +214,26 @@ async function notify (message) {
 }
 
 // 前後処理で挟む
-async function wrapSort (windowId, comparator) {
-  const notification = await getValue(KEY_NOTIFICATION, DEFAULT_NOTIFICATION)
+async function wrapSort (windowId, keyType, notification) {
+  try {
+    if (notification) {
+      await notify(i18n.getMessage(KEY_SORTING))
+    }
 
-  if (notification) {
-    await notify(i18n.getMessage(KEY_SORTING))
-  }
+    const start = new Date()
+    const {all, moved} = await sort(windowId, COMPARATOR_GENERATORS[keyType]())
+    const seconds = (new Date() - start) / 1000
+    const message = i18n.getMessage(KEY_SUCCESS_MESSAGE, [seconds, all, moved])
 
-  const start = new Date()
-  const {all, moved} = await sort(windowId, comparator)
-  const seconds = (new Date() - start) / 1000
-  const message = i18n.getMessage(KEY_SUCCESS_MESSAGE, [seconds, all, moved])
-
-  debug(message)
-  if (notification) {
-    await notify(message)
+    debug(message)
+    if (notification) {
+      await notify(message)
+    }
+  } catch (e) {
+    onError(e)
+    if (notification) {
+      await notify(i18n.getMessage(KEY_FAILURE_MESSAGE, e))
+    }
   }
 }
 
@@ -222,53 +247,37 @@ async function wrapSort (windowId, comparator) {
     }
   })().catch(onError))
 
-  // 右クリックメニューからの入力を処理
+  // 右クリックメニューから実行
   contextMenus.onClicked.addListener((info, tab) => (async function () {
     switch (info.menuItemId) {
-      case KEY_URL: {
-        await wrapSort(tab.windowId, (tab1, tab2) => tab1.url.localeCompare(tab2.url))
-        break
-      }
-      case KEY_URL_REV: {
-        await wrapSort(tab.windowId, (tab1, tab2) => tab2.url.localeCompare(tab1.url))
-        break
-      }
-      case KEY_TITLE: {
-        await wrapSort(tab.windowId, (tab1, tab2) => tab1.title.localeCompare(tab2.title))
-        break
-      }
-      case KEY_TITLE_REV: {
-        await wrapSort(tab.windowId, (tab1, tab2) => tab2.title.localeCompare(tab1.title))
-        break
-      }
-      case KEY_ID: {
-        await wrapSort(tab.windowId, (tab1, tab2) => tab1.id - tab2.id)
-        break
-      }
-      case KEY_ID_REV: {
-        await wrapSort(tab.windowId, (tab1, tab2) => tab2.id - tab1.id)
-        break
-      }
+      case KEY_URL:
+      case KEY_URL_REV:
+      case KEY_TITLE:
+      case KEY_TITLE_REV:
+      case KEY_ID:
+      case KEY_ID_REV:
       case KEY_RAND: {
-        const random = []
-        await wrapSort(tab.windowId, (tab1, tab2) => {
-          const index = Math.max(tab1.index, tab2.index)
-          while (random.length <= index) {
-            random.push(Math.random())
-          }
-          return random[tab1.index] - random[tab2.index]
-        })
+        const notification = await getValue(KEY_NOTIFICATION, DEFAULT_NOTIFICATION)
+        await wrapSort(tab.windowId, info.menuItemId, notification)
         break
       }
     }
-  })().catch((e) => (async function () {
-    onError(e)
+  })().catch(onError))
 
-    const notification = await getValue(KEY_NOTIFICATION, DEFAULT_NOTIFICATION)
-    if (notification) {
-      await notify(i18n.getMessage(KEY_FAILURE_MESSAGE, e))
+  // メッセージから実行
+  runtime.onMessageExternal.addListener((message, sender, sendResponse) => (async function () {
+    debug('Message ' + JSON.stringify(message) + ' was received')
+    switch (message.type) {
+      case KEY_SORT: {
+        const {
+          windowId,
+          keyType,
+          notification
+        } = message
+        await wrapSort(windowId, keyType, notification)
+      }
     }
-  })().catch(onError)))
+  })().catch(onError))
 
   const menuItem = await getValue(KEY_MENU_ITEM, DEFAULT_MENU_ITEM)
   await changeMenu(menuItem)
