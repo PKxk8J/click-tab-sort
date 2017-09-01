@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "__MSG_name__",
   "version": "2.5.0",
-  "description": "Sort tabs from the right click menu on tabs.\n\nYou can sort tabs by URL or title.\nPinned tabs are not sorted.\n\nIn options, you can select items displayed on the menu.",
+  "description": "Sort tabs from the right click menu on tabs.\n\nYou can sort tabs by URL or title.",
   "applications": {
     "gecko": {
       "id": "{9a51d52f-40fa-44c6-9c62-66936e43c4db}",
@@ -10,10 +10,10 @@
     }
   },
   "permissions": [
-    "tabs",
     "contextMenus",
+    "notifications",
     "storage",
-    "notifications"
+    "tabs"
   ],
   "background": {
     "scripts": [
