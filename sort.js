@@ -270,8 +270,8 @@ async function wrapSort (windowId, keyType, notification) {
     switch (message.type) {
       case KEY_SORT: {
         const {
-          windowId,
           keyType,
+          windowId,
           notification
         } = message
         await wrapSort(windowId, keyType, notification)
