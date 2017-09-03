@@ -9,7 +9,7 @@ https://addons.mozilla.org/addon/clicktabsort/
 
 ## <span id="messaging"/> Messaging
 
-Other addons can use this addon by using [sendMessage](https://developer.mozilla.org/en-US/Add-ons/WebExtensions/API/runtime/sendMessage)
+Other addons can use this addon by using [sendMessage](https://developer.mozilla.org/Add-ons/WebExtensions/API/runtime/sendMessage)
 
 ```javascript
 browser.runtime.sendMessage('{9a51d52f-40fa-44c6-9c62-66936e43c4db}', {
