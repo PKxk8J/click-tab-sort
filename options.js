@@ -91,9 +91,11 @@ async function save () {
     input.id = key
     const span = document.createElement('span')
     span.id = 'label_' + key
+    const label = document.createElement('label')
+    label.appendChild(input)
+    label.appendChild(span)
     const li = document.createElement('li')
-    li.appendChild(input)
-    li.appendChild(span)
+    li.appendChild(label)
 
     ul.appendChild(li)
   })
