@@ -1,23 +1,26 @@
 'use strict'
 
-const { i18n, storage } = browser
-const storageArea = storage.sync
-
-const KEY_DEBUG = 'debug'
-
-const KEY_URL = 'url'
-const KEY_URL_REV = 'urlReverse'
-const KEY_TITLE = 'title'
-const KEY_TITLE_REV = 'titleReverse'
-const KEY_ID = 'id'
-const KEY_ID_REV = 'idReverse'
-const KEY_RAND = 'random'
-
-const KEY_MENU_ITEM = 'menuItem'
-const KEY_MENU_ITEM_DESCRIPTION = 'menuItemDescription'
-const KEY_NOTIFICATION = 'notification'
-
-const KEY_SAVE = 'save'
+const {
+  i18n
+} = browser
+const {
+  KEY_URL,
+  KEY_URL_REV,
+  KEY_TITLE,
+  KEY_TITLE_REV,
+  KEY_ID,
+  KEY_ID_REV,
+  KEY_RAND,
+  KEY_MENU_ITEM,
+  KEY_NOTIFICATION,
+  KEY_SAVE,
+  KEY_MENU_ITEM_DESCRIPTION,
+  DEFAULT_MENU_ITEM,
+  DEFAULT_NOTIFICATION,
+  storageArea,
+  debug,
+  onError
+} = common
 
 const MENU_ITEM_KEYS = [KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_ID, KEY_ID_REV, KEY_RAND]
 const LABEL_KEYS = MENU_ITEM_KEYS.concat([KEY_MENU_ITEM, KEY_MENU_ITEM_DESCRIPTION, KEY_NOTIFICATION, KEY_SAVE])
@@ -28,20 +31,6 @@ const LABEL_KEYS = MENU_ITEM_KEYS.concat([KEY_MENU_ITEM, KEY_MENU_ITEM_DESCRIPTI
  *   "notification": true
  * }
  */
-
-const DEFAULT_MENU_ITEM = [KEY_URL, KEY_TITLE]
-const DEFAULT_NOTIFICATION = false
-
-const DEBUG = (i18n.getMessage(KEY_DEBUG) === 'debug')
-function debug (message) {
-  if (DEBUG) {
-    console.log(message)
-  }
-}
-
-function onError (error) {
-  console.error(error)
-}
 
 // 現在の設定を表示する
 async function restore () {
@@ -105,5 +94,5 @@ async function save () {
   })
 
   document.addEventListener('DOMContentLoaded', () => restore().catch(onError))
-  document.getElementById('save').addEventListener('click', (e) => save().catch(onError))
+  document.getElementById(KEY_SAVE).addEventListener('click', (e) => save().catch(onError))
 })().catch(onError)
