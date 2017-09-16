@@ -27,6 +27,9 @@
     onError,
     getValue
   } = common
+  const {
+    run
+  } = sort
 
   // 右クリックメニューに項目を追加する
   function addMenuItem (id, title, parentId) {
@@ -88,7 +91,7 @@
         case KEY_ID_REV:
         case KEY_RAND: {
           const notification = await getValue(KEY_NOTIFICATION, DEFAULT_NOTIFICATION)
-          await sort(tab.windowId, info.menuItemId, notification)
+          await run(tab.windowId, info.menuItemId, notification)
           break
         }
       }

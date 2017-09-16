@@ -118,7 +118,7 @@ var _export
   }
 
   // タブをソートする
-  async function _sort (windowId, comparator) {
+  async function run (windowId, comparator) {
     const tabList = await tabs.query({windowId})
 
     // 現在の並び順
@@ -153,14 +153,14 @@ var _export
   }
 
   // 前後処理で挟む
-  async function wrapSort (windowId, keyType, notification) {
+  async function wrappedRun (windowId, keyType, notification) {
     try {
       if (notification) {
         await notify(i18n.getMessage(KEY_SORTING))
       }
 
       const start = new Date()
-      const {all, moved} = await _sort(windowId, COMPARATOR_GENERATORS[keyType]())
+      const {all, moved} = await run(windowId, COMPARATOR_GENERATORS[keyType]())
       const seconds = (new Date() - start) / 1000
       const message = i18n.getMessage(KEY_SUCCESS_MESSAGE, [seconds, all, moved])
 
@@ -176,7 +176,9 @@ var _export
     }
   }
 
-  _export = wrapSort
+  _export = Object.freeze({
+    run: wrappedRun
+  })
 }
 
 const sort = _export

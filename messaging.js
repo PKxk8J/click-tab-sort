@@ -11,6 +11,9 @@
     debug,
     onError
   } = common
+  const {
+    run
+  } = sort
 
   function handler (message, sender, sendResponse) {
     (async function () {
@@ -22,7 +25,7 @@
             windowId,
             notification
           } = message
-          await sort(windowId, keyType, notification)
+          await run(windowId, keyType, notification)
         }
       }
     })().catch(onError)
