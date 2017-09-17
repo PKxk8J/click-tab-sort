@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "__MSG_name__",
-  "version": "2.5.2",
+  "version": "2.5.3",
   "description": "Sort tabs from the right click menu.",
   "applications": {
     "gecko": {
