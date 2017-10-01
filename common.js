@@ -19,6 +19,8 @@ var _export
   const KEY_TITLE_REV = 'titleReverse'
   const KEY_ID = 'id'
   const KEY_ID_REV = 'idReverse'
+  const KEY_ACCESS = 'access'
+  const KEY_ACCESS_REV = 'accessReverse'
   const KEY_RAND = 'random'
 
   const DEBUG = (i18n.getMessage(KEY_DEBUG) === 'debug')
@@ -50,6 +52,8 @@ var _export
     KEY_TITLE_REV,
     KEY_ID,
     KEY_ID_REV,
+    KEY_ACCESS,
+    KEY_ACCESS_REV,
     KEY_RAND,
     KEY_SORT: 'sort',
     KEY_SORT_BY: 'sortBy',
@@ -60,7 +64,8 @@ var _export
     KEY_SUCCESS_MESSAGE: 'successMessage',
     KEY_FAILURE_MESSAGE: 'failureMessage',
     KEY_MENU_ITEM_DESCRIPTION: 'menuItemDescription',
-    DEFAULT_MENU_ITEM: [KEY_URL, KEY_TITLE],
+    ALL_MENU_ITEMS: [KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_ID, KEY_ID_REV, KEY_ACCESS, KEY_ACCESS_REV, KEY_RAND],
+    DEFAULT_MENU_ITEMS: [KEY_URL, KEY_TITLE],
     DEFAULT_NOTIFICATION: false,
     NOTIFICATION_ID: i18n.getMessage(KEY_NAME),
     DEBUG,

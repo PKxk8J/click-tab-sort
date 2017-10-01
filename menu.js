@@ -10,18 +10,12 @@
     storage
   } = browser
   const {
-    KEY_URL,
-    KEY_URL_REV,
-    KEY_TITLE,
-    KEY_TITLE_REV,
-    KEY_ID,
-    KEY_ID_REV,
-    KEY_RAND,
     KEY_SORT,
     KEY_SORT_BY,
     KEY_MENU_ITEM,
     KEY_NOTIFICATION,
-    DEFAULT_MENU_ITEM,
+    ALL_MENU_ITEMS,
+    DEFAULT_MENU_ITEMS,
     DEFAULT_NOTIFICATION,
     debug,
     onError,
@@ -82,22 +76,13 @@
 
     // 右クリックメニューから実行
     contextMenus.onClicked.addListener((info, tab) => (async function () {
-      switch (info.menuItemId) {
-        case KEY_URL:
-        case KEY_URL_REV:
-        case KEY_TITLE:
-        case KEY_TITLE_REV:
-        case KEY_ID:
-        case KEY_ID_REV:
-        case KEY_RAND: {
-          const notification = await getValue(KEY_NOTIFICATION, DEFAULT_NOTIFICATION)
-          await run(tab.windowId, info.menuItemId, notification)
-          break
-        }
+      if (ALL_MENU_ITEMS.includes(info.menuItemId)) {
+        const notification = await getValue(KEY_NOTIFICATION, DEFAULT_NOTIFICATION)
+        await run(tab.windowId, info.menuItemId, notification)
       }
     })().catch(onError))
 
-    const menuItem = await getValue(KEY_MENU_ITEM, DEFAULT_MENU_ITEM)
+    const menuItem = await getValue(KEY_MENU_ITEM, DEFAULT_MENU_ITEMS)
     await changeMenu(menuItem)
   })().catch(onError)
 }

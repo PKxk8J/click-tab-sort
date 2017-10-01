@@ -4,26 +4,19 @@ const {
   i18n
 } = browser
 const {
-  KEY_URL,
-  KEY_URL_REV,
-  KEY_TITLE,
-  KEY_TITLE_REV,
-  KEY_ID,
-  KEY_ID_REV,
-  KEY_RAND,
   KEY_MENU_ITEM,
   KEY_NOTIFICATION,
   KEY_SAVE,
   KEY_MENU_ITEM_DESCRIPTION,
-  DEFAULT_MENU_ITEM,
+  ALL_MENU_ITEMS,
+  DEFAULT_MENU_ITEMS,
   DEFAULT_NOTIFICATION,
   storageArea,
   debug,
   onError
 } = common
 
-const MENU_ITEM_KEYS = [KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_ID, KEY_ID_REV, KEY_RAND]
-const LABEL_KEYS = MENU_ITEM_KEYS.concat([KEY_MENU_ITEM, KEY_MENU_ITEM_DESCRIPTION, KEY_NOTIFICATION, KEY_SAVE])
+const LABEL_KEYS = ALL_MENU_ITEMS.concat([KEY_MENU_ITEM, KEY_MENU_ITEM_DESCRIPTION, KEY_NOTIFICATION, KEY_SAVE])
 
 /*
  * {
@@ -38,12 +31,12 @@ async function restore () {
   debug('Loaded ' + JSON.stringify(data))
 
   const {
-    [KEY_MENU_ITEM]: menuItem = DEFAULT_MENU_ITEM,
+    [KEY_MENU_ITEM]: menuItem = DEFAULT_MENU_ITEMS,
     [KEY_NOTIFICATION]: notification = DEFAULT_NOTIFICATION
   } = data
 
   const menuItemSet = new Set(menuItem)
-  MENU_ITEM_KEYS.forEach((key) => {
+  ALL_MENU_ITEMS.forEach((key) => {
     document.getElementById(key).checked = menuItemSet.has(key)
   })
 
@@ -53,7 +46,7 @@ async function restore () {
 // 設定を保存する
 async function save () {
   const menuItem = []
-  MENU_ITEM_KEYS.forEach((key) => {
+  ALL_MENU_ITEMS.forEach((key) => {
     if (document.getElementById(key).checked) {
       menuItem.push(key)
     }
@@ -74,7 +67,7 @@ async function save () {
 // 初期化
 (async function () {
   const ul = document.getElementById(KEY_MENU_ITEM)
-  MENU_ITEM_KEYS.forEach((key) => {
+  ALL_MENU_ITEMS.forEach((key) => {
     const input = document.createElement('input')
     input.type = 'checkbox'
     input.id = key
