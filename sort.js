@@ -17,6 +17,8 @@ var _export
     KEY_TITLE_REV,
     KEY_ID,
     KEY_ID_REV,
+    KEY_ACCESS,
+    KEY_ACCESS_REV,
     KEY_RAND,
     KEY_SORTING,
     KEY_SUCCESS_MESSAGE,
@@ -34,6 +36,8 @@ var _export
     [KEY_TITLE_REV]: () => (tab1, tab2) => tab2.title.localeCompare(tab1.title),
     [KEY_ID]: () => (tab1, tab2) => tab1.id - tab2.id,
     [KEY_ID_REV]: () => (tab1, tab2) => tab2.id - tab1.id,
+    [KEY_ACCESS]: () => (tab1, tab2) => tab1.lastAccessed - tab2.lastAccessed,
+    [KEY_ACCESS_REV]: () => (tab1, tab2) => tab2.lastAccessed - tab1.lastAccessed,
     [KEY_RAND]: () => {
       const random = []
       return (tab1, tab2) => {

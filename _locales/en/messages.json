@@ -30,6 +30,12 @@
   "idReverse": {
     "message": "Opened Date (New-Old)"
   },
+  "access": {
+    "message": "Accessed Date (Old-New)"
+  },
+  "accessReverse": {
+    "message": "Accessed Date (New-Old)"
+  },
   "random": {
     "message": "Random"
   },
@@ -63,6 +69,6 @@
     "message": "Sorting tabs failed.\n$1"
   },
   "menuItemDescription": {
-    "message": "Opened dates are reset when Firefox starts."
+    "message": "Opened dates are reset when Firefox starts. Accessed date orders work with Firefox 56 or later."
   }
 }
