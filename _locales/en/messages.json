@@ -49,6 +49,9 @@
     "message": "Save"
   },
   "sorting": {
+    "message": "Sorting tabs..."
+  },
+  "progress": {
     "message": "Sorting tabs... $PROGRESS$% completed in $TIME$ seconds.",
     "placeholders": {
       "time": {

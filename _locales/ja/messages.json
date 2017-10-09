@@ -42,6 +42,9 @@
     "message": "保存"
   },
   "sorting": {
+    "message": "タブをソート中..."
+  },
+  "progress": {
     "message": "タブをソート中... $PROGRESS$%完了: $TIME$秒",
     "placeholders": {
       "time": {

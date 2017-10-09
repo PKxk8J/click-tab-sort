@@ -21,6 +21,7 @@ var _export
     KEY_ACCESS_REV,
     KEY_RAND,
     KEY_SORTING,
+    KEY_PROGRESS,
     KEY_SUCCESS_MESSAGE,
     KEY_FAILURE_MESSAGE,
     NOTIFICATION_ID,
@@ -147,9 +148,12 @@ var _export
   }
 
   async function startProgressNotification (progress) {
-    while (!progress.end && !progress.error) {
-      notify(progress)
+    while (true) {
       await asleep(NOTIFICATION_INTERVAL)
+      if (progress.end || progress.error) {
+        break
+      }
+      notify(progress)
     }
   }
 
@@ -164,9 +168,9 @@ var _export
     } else if (progress.start && progress.target) {
       const seconds = (new Date() - progress.start) / 1000
       const percentage = Math.floor(progress.done * 100 / progress.target)
-      message = i18n.getMessage(KEY_SORTING, [seconds, percentage])
+      message = i18n.getMessage(KEY_PROGRESS, [seconds, percentage])
     } else {
-      message = i18n.getMessage(KEY_SORTING, [0, 0])
+      message = i18n.getMessage(KEY_SORTING)
     }
     await notifications.create(NOTIFICATION_ID, {
       'type': 'basic',
@@ -182,6 +186,7 @@ var _export
     }
     try {
       if (notification) {
+        await notify(progress)
         startProgressNotification(progress)
         progress.start = new Date()
       }

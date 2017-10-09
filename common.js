@@ -61,6 +61,7 @@ var _export
     KEY_NOTIFICATION: 'notification',
     KEY_SAVE: 'save',
     KEY_SORTING: 'sorting',
+    KEY_PROGRESS: 'progress',
     KEY_SUCCESS_MESSAGE: 'successMessage',
     KEY_FAILURE_MESSAGE: 'failureMessage',
     KEY_MENU_ITEM_DESCRIPTION: 'menuItemDescription',
