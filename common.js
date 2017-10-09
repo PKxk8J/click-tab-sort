@@ -33,10 +33,6 @@ var _export
     }
   }
 
-  function onError (error) {
-    console.error(error)
-  }
-
   // 設定値を取得する
   async function getValue (key, defaultValue) {
     const {
@@ -71,7 +67,7 @@ var _export
     DEBUG,
     storageArea,
     debug,
-    onError,
+    onError: console.error,
     getValue
   })
 }
