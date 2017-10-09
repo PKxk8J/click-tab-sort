@@ -24,8 +24,10 @@ var _export
     KEY_SUCCESS_MESSAGE,
     KEY_FAILURE_MESSAGE,
     NOTIFICATION_ID,
+    NOTIFICATION_INTERVAL,
     debug,
-    onError
+    onError,
+    asleep
   } = common
 
   // 比較関数の生成関数
@@ -51,7 +53,7 @@ var _export
   }
 
   // 並べ替える
-  async function rearrange (curOrder, idealOrder) {
+  async function rearrange (curOrder, idealOrder, progress) {
     const idToIdealIndex = new Map()
     for (let i = 0; i < idealOrder.length; i++) {
       idToIdealIndex.set(idealOrder[i].id, i)
@@ -66,8 +68,6 @@ var _export
     let tailIndex = idealOrder.length - 1
     let curTailIndex = curOrder.length - 1
 
-    let nMoved = 0
-
     while (headIndex <= tailIndex) {
       const curHeadId = curOrder[curHeadIndex].id
       if (orderedIds.has(curHeadId)) {
@@ -80,6 +80,8 @@ var _export
         curTailIndex--
         continue
       }
+
+      progress.checked++
 
       const idealHeadId = idealOrder[headIndex].id
       if (curHeadId === idealHeadId) {
@@ -97,6 +99,8 @@ var _export
         continue
       }
 
+      progress.moved++
+
       // 既存の並びを利用できるまでに必要な挿入の回数
       const headDiff = idToIdealIndex.get(curHeadId) - headIndex
       const tailDiff = tailIndex - idToIdealIndex.get(curTailId)
@@ -107,23 +111,22 @@ var _export
         debug('Tab ' + idealHeadId + ' was moved to ' + index)
         orderedIds.add(idealHeadId)
         headIndex++
-        nMoved++
       } else {
         const index = tailIndex
         await tabs.move(idealTailId, {index})
         debug('Tab ' + idealTailId + ' was moved to ' + index)
         orderedIds.add(idealTailId)
         tailIndex--
-        nMoved++
       }
     }
-
-    return nMoved
   }
 
   // タブをソートする
-  async function run (windowId, comparator) {
+  async function run (windowId, comparator, progress) {
     const tabList = await tabs.query({windowId})
+    progress.all = tabList.length
+    progress.checked = 0
+    progress.moved = 0
 
     // 現在の並び順
     tabList.sort((tab1, tab2) => tab1.index - tab2.index)
@@ -140,42 +143,59 @@ var _export
     unpinnedIdealOrder.sort(comparator)
     const idealOrder = tabList.slice(0, firstUnpinnedIndex).concat(unpinnedIdealOrder)
 
-    const nMoved = await rearrange(tabList, idealOrder)
-    return {
-      all: tabList.length,
-      moved: nMoved
+    await rearrange(tabList, idealOrder, progress)
+  }
+
+  async function startProgressNotification (progress) {
+    while (!progress.end && !progress.error) {
+      notify(progress)
+      await asleep(NOTIFICATION_INTERVAL)
     }
   }
 
   // 通知を表示する
-  async function notify (message) {
+  async function notify (progress) {
+    let message
+    if (progress.error) {
+      message = i18n.getMessage(KEY_FAILURE_MESSAGE, progress.error)
+    } else if (progress.end) {
+      const seconds = (progress.end - progress.start) / 1000
+      message = i18n.getMessage(KEY_SUCCESS_MESSAGE, [seconds, progress.all, progress.moved])
+    } else if (progress.all) {
+      const seconds = (new Date() - progress.start) / 1000
+      const percentage = Math.floor(progress.checked * 100 / progress.all)
+      message = i18n.getMessage(KEY_SORTING, [seconds, percentage])
+    } else {
+      message = i18n.getMessage(KEY_SORTING, [0, 0])
+    }
     await notifications.create(NOTIFICATION_ID, {
       'type': 'basic',
       'title': NOTIFICATION_ID,
-      message: message
+      message
     })
   }
 
   // 前後処理で挟む
   async function wrappedRun (windowId, keyType, notification) {
+    let progress = {}
     try {
       if (notification) {
-        await notify(i18n.getMessage(KEY_SORTING))
+        startProgressNotification(progress)
+        progress.start = new Date()
       }
 
-      const start = new Date()
-      const {all, moved} = await run(windowId, COMPARATOR_GENERATORS[keyType]())
-      const seconds = (new Date() - start) / 1000
-      const message = i18n.getMessage(KEY_SUCCESS_MESSAGE, [seconds, all, moved])
+      await run(windowId, COMPARATOR_GENERATORS[keyType](), progress)
+      debug('Finished')
 
-      debug(message)
       if (notification) {
-        await notify(message)
+        progress.end = new Date()
+        await notify(progress)
       }
     } catch (e) {
       onError(e)
       if (notification) {
-        await notify(i18n.getMessage(KEY_FAILURE_MESSAGE, e))
+        progress.error = e
+        await notify(progress)
       }
     }
   }

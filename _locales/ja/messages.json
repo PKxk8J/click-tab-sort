@@ -42,7 +42,15 @@
     "message": "保存"
   },
   "sorting": {
-    "message": "タブをソート中..."
+    "message": "タブをソート中... $PROGRESS$%完了: $TIME$秒",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      },
+      "progress": {
+        "content": "$2"
+      }
+    }
   },
   "successMessage": {
     "message": "タブをソート完了: $TIME$秒\n$ALL$個中$MOVED$個のタブを移動",

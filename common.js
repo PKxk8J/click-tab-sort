@@ -41,6 +41,10 @@ var _export
     return value
   }
 
+  async function asleep (msec) {
+    return new Promise(resolve => setTimeout(resolve, msec))
+  }
+
   _export = Object.freeze({
     KEY_URL,
     KEY_URL_REV,
@@ -64,11 +68,13 @@ var _export
     DEFAULT_MENU_ITEMS: [KEY_URL, KEY_TITLE],
     DEFAULT_NOTIFICATION: false,
     NOTIFICATION_ID: i18n.getMessage(KEY_NAME),
+    NOTIFICATION_INTERVAL: 10 * 1000,
     DEBUG,
     storageArea,
     debug,
     onError: console.error,
-    getValue
+    getValue,
+    asleep
   })
 }
 
