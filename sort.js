@@ -68,6 +68,7 @@ var _export
     let tailIndex = idealOrder.length - 1
     let curTailIndex = curOrder.length - 1
 
+    const movePairs = []
     while (headIndex <= tailIndex) {
       const curHeadId = curOrder[curHeadIndex].id
       if (orderedIds.has(curHeadId)) {
@@ -80,8 +81,6 @@ var _export
         curTailIndex--
         continue
       }
-
-      progress.checked++
 
       const idealHeadId = idealOrder[headIndex].id
       if (curHeadId === idealHeadId) {
@@ -99,25 +98,28 @@ var _export
         continue
       }
 
-      progress.moved++
-
       // 既存の並びを利用できるまでに必要な挿入の回数
       const headDiff = idToIdealIndex.get(curHeadId) - headIndex
       const tailDiff = tailIndex - idToIdealIndex.get(curTailId)
 
       if (headDiff <= tailDiff) {
-        const index = headIndex
-        await tabs.move(idealHeadId, {index})
-        debug('Tab ' + idealHeadId + ' was moved to ' + index)
+        movePairs.push([idealHeadId, headIndex])
         orderedIds.add(idealHeadId)
         headIndex++
       } else {
-        const index = tailIndex
-        await tabs.move(idealTailId, {index})
-        debug('Tab ' + idealTailId + ' was moved to ' + index)
+        movePairs.push([idealTailId, tailIndex])
         orderedIds.add(idealTailId)
         tailIndex--
       }
+    }
+
+    progress.target = movePairs.length
+    for (const movePair of movePairs) {
+      const id = movePair[0]
+      const index = movePair[1]
+      await tabs.move(id, {index})
+      debug('Tab ' + id + ' was moved to ' + index)
+      progress.done++
     }
   }
 
@@ -125,8 +127,6 @@ var _export
   async function run (windowId, comparator, progress) {
     const tabList = await tabs.query({windowId})
     progress.all = tabList.length
-    progress.checked = 0
-    progress.moved = 0
 
     // 現在の並び順
     tabList.sort((tab1, tab2) => tab1.index - tab2.index)
@@ -160,10 +160,10 @@ var _export
       message = i18n.getMessage(KEY_FAILURE_MESSAGE, progress.error)
     } else if (progress.end) {
       const seconds = (progress.end - progress.start) / 1000
-      message = i18n.getMessage(KEY_SUCCESS_MESSAGE, [seconds, progress.all, progress.moved])
-    } else if (progress.all) {
+      message = i18n.getMessage(KEY_SUCCESS_MESSAGE, [seconds, progress.all, progress.done])
+    } else if (progress.start && progress.target) {
       const seconds = (new Date() - progress.start) / 1000
-      const percentage = Math.floor(progress.checked * 100 / progress.all)
+      const percentage = Math.floor(progress.done * 100 / progress.target)
       message = i18n.getMessage(KEY_SORTING, [seconds, percentage])
     } else {
       message = i18n.getMessage(KEY_SORTING, [0, 0])
@@ -177,7 +177,9 @@ var _export
 
   // 前後処理で挟む
   async function wrappedRun (windowId, keyType, notification) {
-    let progress = {}
+    const progress = {
+      done: 0
+    }
     try {
       if (notification) {
         startProgressNotification(progress)
