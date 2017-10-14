@@ -33,16 +33,16 @@ var _export
     }
   }
 
-  function onError (error) {
-    console.error(error)
-  }
-
   // 設定値を取得する
   async function getValue (key, defaultValue) {
     const {
       [key]: value = defaultValue
     } = await storageArea.get(key)
     return value
+  }
+
+  async function asleep (msec) {
+    return new Promise(resolve => setTimeout(resolve, msec))
   }
 
   _export = Object.freeze({
@@ -61,6 +61,7 @@ var _export
     KEY_NOTIFICATION: 'notification',
     KEY_SAVE: 'save',
     KEY_SORTING: 'sorting',
+    KEY_PROGRESS: 'progress',
     KEY_SUCCESS_MESSAGE: 'successMessage',
     KEY_FAILURE_MESSAGE: 'failureMessage',
     KEY_MENU_ITEM_DESCRIPTION: 'menuItemDescription',
@@ -68,11 +69,13 @@ var _export
     DEFAULT_MENU_ITEMS: [KEY_URL, KEY_TITLE],
     DEFAULT_NOTIFICATION: false,
     NOTIFICATION_ID: i18n.getMessage(KEY_NAME),
+    NOTIFICATION_INTERVAL: 10 * 1000,
     DEBUG,
     storageArea,
     debug,
-    onError,
-    getValue
+    onError: console.error,
+    getValue,
+    asleep
   })
 }
 

@@ -51,6 +51,17 @@
   "sorting": {
     "message": "Sorting tabs..."
   },
+  "progress": {
+    "message": "Sorting tabs... $PROGRESS$% completed in $TIME$ seconds.",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      },
+      "progress": {
+        "content": "$2"
+      }
+    }
+  },
   "successMessage": {
     "message": "Sorting tabs completed in $TIME$ seconds.\n$MOVED$ of $ALL$ tabs were moved.",
     "placeholders": {
