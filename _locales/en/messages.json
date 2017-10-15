@@ -78,8 +78,5 @@
   },
   "failureMessage": {
     "message": "Sorting tabs failed.\n$1"
-  },
-  "menuItemDescription": {
-    "message": "Opened dates are reset when Firefox starts. Accessed date orders work with Firefox 56 or later."
   }
 }
