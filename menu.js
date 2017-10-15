@@ -78,7 +78,7 @@
     contextMenus.onClicked.addListener((info, tab) => (async function () {
       if (ALL_MENU_ITEMS.includes(info.menuItemId)) {
         const notification = await getValue(KEY_NOTIFICATION, DEFAULT_NOTIFICATION)
-        await run(tab.windowId, info.menuItemId, notification)
+        await run(tab.windowId, info.menuItemId, tab.pinned, notification)
       }
     })().catch(onError))
 

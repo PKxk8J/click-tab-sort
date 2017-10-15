@@ -125,7 +125,7 @@ var _export
   }
 
   // タブをソートする
-  async function run (windowId, comparator, progress) {
+  async function run (windowId, comparator, pinned, progress) {
     const tabList = await tabs.query({windowId})
     progress.all = tabList.length
 
@@ -140,9 +140,16 @@ var _export
     }
 
     // ソート後の並び順
-    const unpinnedIdealOrder = tabList.slice(firstUnpinnedIndex)
-    unpinnedIdealOrder.sort(comparator)
-    const idealOrder = tabList.slice(0, firstUnpinnedIndex).concat(unpinnedIdealOrder)
+    let idealOrder
+    if (pinned) {
+      const pinnedIdealOrder = tabList.slice(0, firstUnpinnedIndex)
+      pinnedIdealOrder.sort(comparator)
+      idealOrder = pinnedIdealOrder.concat(tabList.slice(firstUnpinnedIndex))
+    } else {
+      const unpinnedIdealOrder = tabList.slice(firstUnpinnedIndex)
+      unpinnedIdealOrder.sort(comparator)
+      idealOrder = tabList.slice(0, firstUnpinnedIndex).concat(unpinnedIdealOrder)
+    }
 
     await rearrange(tabList, idealOrder, progress)
   }
@@ -180,7 +187,7 @@ var _export
   }
 
   // 前後処理で挟む
-  async function wrappedRun (windowId, keyType, notification) {
+  async function wrappedRun (windowId, keyType, pinned, notification) {
     const progress = {
       done: 0
     }
@@ -191,7 +198,7 @@ var _export
         progress.start = new Date()
       }
 
-      await run(windowId, COMPARATOR_GENERATORS[keyType](), progress)
+      await run(windowId, COMPARATOR_GENERATORS[keyType](), pinned, progress)
       debug('Finished')
 
       if (notification) {

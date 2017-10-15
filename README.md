@@ -16,6 +16,7 @@ browser.runtime.sendMessage('{9a51d52f-40fa-44c6-9c62-66936e43c4db}', {
   type: 'sort',
   keyType: 'title',
   windowId: 24,
+  pinned: false,
   notification: false
 })
 ```
@@ -33,4 +34,5 @@ browser.runtime.sendMessage('{9a51d52f-40fa-44c6-9c62-66936e43c4db}', {
 |type|string|`sort`|
 |keyType|string|`url` or `urlReverse` or `title` or `titleReverse` or `id` or `idReverse` or `access` or `accessReverse` or `random`|
 |windowId|number|The ID of a target window|
+|pinned|boolean|If true, pinned tabs are sorted|
 |notification|boolean|Whether to show notification|
