@@ -71,8 +71,5 @@
   },
   "failureMessage": {
     "message": "タブをソート失敗\n$1"
-  },
-  "menuItemDescription": {
-    "message": "開いた日時はFirefoxを起動する度にリセットされます。最後に見た日時はFirefox56以降で動作します。"
   }
 }
