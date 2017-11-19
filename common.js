@@ -13,6 +13,9 @@ var _export
   const KEY_DEBUG = 'debug'
   const KEY_NAME = 'name'
 
+  const KEY_TAB = 'tab'
+  const KEY_ALL = 'all'
+
   const KEY_URL = 'url'
   const KEY_URL_REV = 'urlReverse'
   const KEY_TITLE = 'title'
@@ -46,6 +49,8 @@ var _export
   }
 
   _export = Object.freeze({
+    KEY_TAB,
+    KEY_ALL,
     KEY_URL,
     KEY_URL_REV,
     KEY_TITLE,
@@ -57,13 +62,16 @@ var _export
     KEY_RAND,
     KEY_SORT: 'sort',
     KEY_SORT_BY: 'sortBy',
-    KEY_MENU_ITEM: 'menuItem',
+    KEY_CONTEXTS: 'contexts',
+    KEY_MENU_ITEMS: 'menuItems',
     KEY_NOTIFICATION: 'notification',
     KEY_SAVE: 'save',
     KEY_SORTING: 'sorting',
     KEY_PROGRESS: 'progress',
     KEY_SUCCESS_MESSAGE: 'successMessage',
     KEY_FAILURE_MESSAGE: 'failureMessage',
+    ALL_CONTEXTS: [KEY_TAB, KEY_ALL],
+    DEFAULT_CONTEXTS: [KEY_TAB],
     ALL_MENU_ITEMS: [KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_ID, KEY_ID_REV, KEY_ACCESS, KEY_ACCESS_REV, KEY_RAND],
     DEFAULT_MENU_ITEMS: [KEY_URL, KEY_TITLE],
     DEFAULT_NOTIFICATION: false,

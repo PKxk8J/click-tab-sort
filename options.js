@@ -4,9 +4,12 @@ const {
   i18n
 } = browser
 const {
-  KEY_MENU_ITEM,
+  KEY_CONTEXTS,
+  KEY_MENU_ITEMS,
   KEY_NOTIFICATION,
   KEY_SAVE,
+  ALL_CONTEXTS,
+  DEFAULT_CONTEXTS,
   ALL_MENU_ITEMS,
   DEFAULT_MENU_ITEMS,
   DEFAULT_NOTIFICATION,
@@ -15,11 +18,12 @@ const {
   onError
 } = common
 
-const LABEL_KEYS = ALL_MENU_ITEMS.concat([KEY_MENU_ITEM, KEY_NOTIFICATION, KEY_SAVE])
+const LABEL_KEYS = ALL_CONTEXTS.concat(ALL_MENU_ITEMS, [KEY_CONTEXTS, KEY_MENU_ITEMS, KEY_NOTIFICATION, KEY_SAVE])
 
 /*
  * {
- *   "menuItem": ["url", "title", ...],
+ *   "contexts": ["tab"],
+ *   "menuItems": ["url", "title", ...],
  *   "notification": true
  * }
  */
@@ -30,11 +34,17 @@ async function restore () {
   debug('Loaded ' + JSON.stringify(data))
 
   const {
-    [KEY_MENU_ITEM]: menuItem = DEFAULT_MENU_ITEMS,
+    [KEY_CONTEXTS]: contexts = DEFAULT_CONTEXTS,
+    [KEY_MENU_ITEMS]: menuItems = DEFAULT_MENU_ITEMS,
     [KEY_NOTIFICATION]: notification = DEFAULT_NOTIFICATION
   } = data
 
-  const menuItemSet = new Set(menuItem)
+  const contextSet = new Set(contexts)
+  ALL_CONTEXTS.forEach((key) => {
+    document.getElementById(key).checked = contextSet.has(key)
+  })
+
+  const menuItemSet = new Set(menuItems)
   ALL_MENU_ITEMS.forEach((key) => {
     document.getElementById(key).checked = menuItemSet.has(key)
   })
@@ -44,17 +54,25 @@ async function restore () {
 
 // 設定を保存する
 async function save () {
-  const menuItem = []
+  const contexts = []
+  ALL_CONTEXTS.forEach((key) => {
+    if (document.getElementById(key).checked) {
+      contexts.push(key)
+    }
+  })
+
+  const menuItems = []
   ALL_MENU_ITEMS.forEach((key) => {
     if (document.getElementById(key).checked) {
-      menuItem.push(key)
+      menuItems.push(key)
     }
   })
 
   const notification = document.getElementById(KEY_NOTIFICATION).checked
 
   const data = {
-    [KEY_MENU_ITEM]: menuItem,
+    [KEY_CONTEXTS]: contexts,
+    [KEY_MENU_ITEMS]: menuItems,
     [KEY_NOTIFICATION]: notification
   }
   // 古い形式のデータを消す
@@ -65,8 +83,7 @@ async function save () {
 
 // 初期化
 (async function () {
-  const ul = document.getElementById(KEY_MENU_ITEM)
-  ALL_MENU_ITEMS.forEach((key) => {
+  function addCheckboxEntry (key, ul) {
     const input = document.createElement('input')
     input.type = 'checkbox'
     input.id = key
@@ -79,7 +96,13 @@ async function save () {
     li.appendChild(label)
 
     ul.appendChild(li)
-  })
+  }
+
+  const contextUl = document.getElementById(KEY_CONTEXTS)
+  ALL_CONTEXTS.forEach((key) => addCheckboxEntry(key, contextUl))
+
+  const itemUl = document.getElementById(KEY_MENU_ITEMS)
+  ALL_MENU_ITEMS.forEach((key) => addCheckboxEntry(key, itemUl))
 
   LABEL_KEYS.forEach((key) => {
     document.getElementById('label_' + key).textContent = ' ' + i18n.getMessage(key) + ' '
