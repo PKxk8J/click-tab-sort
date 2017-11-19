@@ -7,7 +7,8 @@
     contextMenus,
     i18n,
     runtime,
-    storage
+    storage,
+    tabs
   } = browser
   const {
     KEY_SORT,
@@ -77,6 +78,7 @@
     // 右クリックメニューから実行
     contextMenus.onClicked.addListener((info, tab) => (async function () {
       if (ALL_MENU_ITEMS.includes(info.menuItemId)) {
+        tab = tab || (await tabs.query({active: true, currentWindow: true}))[0]
         const notification = await getValue(KEY_NOTIFICATION, DEFAULT_NOTIFICATION)
         await run(tab.windowId, info.menuItemId, tab.pinned, notification)
       }
