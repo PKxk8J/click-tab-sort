@@ -35,7 +35,7 @@
   "notification": {
     "message": "通知"
   },
-  "menuItem": {
+  "menuItems": {
     "message": "メニュー項目"
   },
   "save": {

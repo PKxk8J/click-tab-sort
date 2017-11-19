@@ -57,7 +57,7 @@ var _export
     KEY_RAND,
     KEY_SORT: 'sort',
     KEY_SORT_BY: 'sortBy',
-    KEY_MENU_ITEM: 'menuItem',
+    KEY_MENU_ITEMS: 'menuItems',
     KEY_NOTIFICATION: 'notification',
     KEY_SAVE: 'save',
     KEY_SORTING: 'sorting',

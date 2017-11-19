@@ -42,7 +42,7 @@
   "notification": {
     "message": "Notification"
   },
-  "menuItem": {
+  "menuItems": {
     "message": "Menu Items"
   },
   "save": {

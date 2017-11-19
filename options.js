@@ -4,7 +4,7 @@ const {
   i18n
 } = browser
 const {
-  KEY_MENU_ITEM,
+  KEY_MENU_ITEMS,
   KEY_NOTIFICATION,
   KEY_SAVE,
   ALL_MENU_ITEMS,
@@ -15,11 +15,11 @@ const {
   onError
 } = common
 
-const LABEL_KEYS = ALL_MENU_ITEMS.concat([KEY_MENU_ITEM, KEY_NOTIFICATION, KEY_SAVE])
+const LABEL_KEYS = ALL_MENU_ITEMS.concat([KEY_MENU_ITEMS, KEY_NOTIFICATION, KEY_SAVE])
 
 /*
  * {
- *   "menuItem": ["url", "title", ...],
+ *   "menuItems": ["url", "title", ...],
  *   "notification": true
  * }
  */
@@ -30,11 +30,11 @@ async function restore () {
   debug('Loaded ' + JSON.stringify(data))
 
   const {
-    [KEY_MENU_ITEM]: menuItem = DEFAULT_MENU_ITEMS,
+    [KEY_MENU_ITEMS]: menuItems = DEFAULT_MENU_ITEMS,
     [KEY_NOTIFICATION]: notification = DEFAULT_NOTIFICATION
   } = data
 
-  const menuItemSet = new Set(menuItem)
+  const menuItemSet = new Set(menuItems)
   ALL_MENU_ITEMS.forEach((key) => {
     document.getElementById(key).checked = menuItemSet.has(key)
   })
@@ -44,17 +44,17 @@ async function restore () {
 
 // 設定を保存する
 async function save () {
-  const menuItem = []
+  const menuItems = []
   ALL_MENU_ITEMS.forEach((key) => {
     if (document.getElementById(key).checked) {
-      menuItem.push(key)
+      menuItems.push(key)
     }
   })
 
   const notification = document.getElementById(KEY_NOTIFICATION).checked
 
   const data = {
-    [KEY_MENU_ITEM]: menuItem,
+    [KEY_MENU_ITEMS]: menuItems,
     [KEY_NOTIFICATION]: notification
   }
   // 古い形式のデータを消す
@@ -65,7 +65,7 @@ async function save () {
 
 // 初期化
 (async function () {
-  const ul = document.getElementById(KEY_MENU_ITEM)
+  const ul = document.getElementById(KEY_MENU_ITEMS)
   ALL_MENU_ITEMS.forEach((key) => {
     const input = document.createElement('input')
     input.type = 'checkbox'
