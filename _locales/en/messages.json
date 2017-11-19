@@ -78,5 +78,14 @@
   },
   "failureMessage": {
     "message": "Sorting tabs failed.\n$1"
+  },
+  "contexts": {
+    "message": "Click Menu"
+  },
+  "tab": {
+    "message": "On Tabs"
+  },
+  "all": {
+    "message": "On Pages"
   }
 }

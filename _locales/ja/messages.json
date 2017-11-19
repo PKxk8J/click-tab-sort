@@ -71,5 +71,14 @@
   },
   "failureMessage": {
     "message": "タブをソート失敗\n$1"
+  },
+  "contexts": {
+    "message": "クリックメニュー"
+  },
+  "tab": {
+    "message": "タブ"
+  },
+  "all": {
+    "message": "ページ"
   }
 }

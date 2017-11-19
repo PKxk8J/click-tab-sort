@@ -13,9 +13,11 @@
   const {
     KEY_SORT,
     KEY_SORT_BY,
+    KEY_CONTEXTS,
     KEY_MENU_ITEMS,
     KEY_NOTIFICATION,
     ALL_MENU_ITEMS,
+    DEFAULT_CONTEXTS,
     DEFAULT_MENU_ITEMS,
     DEFAULT_NOTIFICATION,
     debug,
@@ -27,11 +29,15 @@
   } = sort
 
   // 右クリックメニューに項目を追加する
-  function addMenuItem (id, title, parentId) {
+  async function addMenuItem (id, title, parentId) {
+    const contexts = await getValue(KEY_CONTEXTS, DEFAULT_CONTEXTS)
+    if (contexts.length <= 0) {
+      return
+    }
     contextMenus.create({
       id,
       title,
-      contexts: ['tab'],
+      contexts,
       parentId
     }, () => {
       if (runtime.lastError) {
@@ -55,12 +61,14 @@
       case 1: {
         // 1 つだけのときはフラットメニュー
         const key = menuItems[0]
-        addMenuItem(key, i18n.getMessage(KEY_SORT_BY, i18n.getMessage(key)))
+        await addMenuItem(key, i18n.getMessage(KEY_SORT_BY, i18n.getMessage(key)))
         break
       }
       default: {
         addMenuItem(KEY_SORT, i18n.getMessage(KEY_SORT))
-        menuItems.forEach((key) => addMenuItem(key, i18n.getMessage(key), KEY_SORT))
+        for (const key of menuItems) {
+          await addMenuItem(key, i18n.getMessage(key), KEY_SORT)
+        }
       }
     }
   }
