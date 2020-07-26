@@ -39,6 +39,9 @@
   "random": {
     "message": "Random"
   },
+  "reverse": {
+    "message": "Reverse Order"
+  },
   "notification": {
     "message": "Notification"
   },

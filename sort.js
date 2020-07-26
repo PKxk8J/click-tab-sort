@@ -20,6 +20,7 @@ var _export
         KEY_ACCESS,
         KEY_ACCESS_REV,
         KEY_RAND,
+        KEY_REV,
         KEY_SORTING,
         KEY_PROGRESS,
         KEY_SUCCESS_MESSAGE,
@@ -49,6 +50,16 @@ var _export
                     random.push(Math.random())
                 }
                 return random[tab1.index] - random[tab2.index]
+            }
+        },
+        [KEY_REV]: () => {
+            const indices = []
+            return (tab1, tab2) => {
+                const index = Math.max(tab1.index, tab2.index)
+                while (indices.length <= index) {
+                    indices.push(indices.length)
+                }
+                return indices[tab2.index] - indices[tab1.index]
             }
         }
     }

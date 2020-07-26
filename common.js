@@ -25,6 +25,7 @@ var _export
     const KEY_ACCESS = 'access'
     const KEY_ACCESS_REV = 'accessReverse'
     const KEY_RAND = 'random'
+    const KEY_REV = 'reverse'
 
     const DEBUG = (i18n.getMessage(KEY_DEBUG) === 'debug')
 
@@ -60,6 +61,7 @@ var _export
         KEY_ACCESS,
         KEY_ACCESS_REV,
         KEY_RAND,
+        KEY_REV,
         KEY_SORT: 'sort',
         KEY_SORT_BY: 'sortBy',
         KEY_CONTEXTS: 'contexts',
@@ -72,7 +74,7 @@ var _export
         KEY_FAILURE_MESSAGE: 'failureMessage',
         ALL_CONTEXTS: [KEY_TAB, KEY_ALL],
         DEFAULT_CONTEXTS: [KEY_TAB],
-        ALL_MENU_ITEMS: [KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_ID, KEY_ID_REV, KEY_ACCESS, KEY_ACCESS_REV, KEY_RAND],
+        ALL_MENU_ITEMS: [KEY_URL, KEY_URL_REV, KEY_TITLE, KEY_TITLE_REV, KEY_ID, KEY_ID_REV, KEY_ACCESS, KEY_ACCESS_REV, KEY_RAND, KEY_REV],
         DEFAULT_MENU_ITEMS: [KEY_URL, KEY_TITLE],
         DEFAULT_NOTIFICATION: false,
         NOTIFICATION_ID: i18n.getMessage(KEY_NAME),
