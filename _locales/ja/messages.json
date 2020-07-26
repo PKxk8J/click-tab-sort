@@ -32,6 +32,9 @@
   "random": {
     "message": "ランダム"
   },
+  "reverse": {
+    "message": "今の逆順"
+  },
   "notification": {
     "message": "通知"
   },

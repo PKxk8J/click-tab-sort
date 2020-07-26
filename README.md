@@ -32,7 +32,13 @@ browser.runtime.sendMessage('{9a51d52f-40fa-44c6-9c62-66936e43c4db}', {
 |Property name|Type|Description|
 |:--|:--|:--|
 |type|string|`sort`|
-|keyType|string|`url` or `urlReverse` or `title` or `titleReverse` or `id` or `idReverse` or `access` or `accessReverse` or `random`|
+|keyType|string|`url` or `urlReverse` or `title` or `titleReverse` or `id` or `idReverse` or `access` or `accessReverse` or `random` or `reverse`|
 |windowId|number|The ID of a target window|
 |pinned|boolean|If true, pinned tabs are sorted|
 |notification|boolean|Whether to show notification|
+
+## リリース方法
+
+```console
+$ web-ext build
+```
