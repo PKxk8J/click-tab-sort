@@ -1,44 +1,48 @@
 # click-tab-sort
 
-タブ右クリックからタブをソートする Firefox アドオン。
-
-e10s 対応。
+タブ右クリックからタブをソートする Firefox 専用アドオン。
 
 https://addons.mozilla.org/addon/clicktabsort/
 
+## 機能
 
-## <span id="messaging"/> Messaging
+- URL、タイトル、開いた日時、最後に見た日時でタブをソート
+- 昇順、降順、ランダム、現在順の反転に対応
+- 固定タブから実行した場合のみ、固定タブ同士をソート
+- タブグループはトップレベルでは 1 つのまとまりとしてソート
+- 分割ビューは内部順を保った 1 つのまとまりとしてソート
+- コンテナは区別せずにソート
+- 設定で右クリックメニューの表示場所と項目を選択
+- ソート項目ごとに「クリック先の範囲」と「トップレベルと全グループ」を選択
+- 通知は設定で有効にした場合のみ使用
 
-Other addons can use this addon by using [sendMessage](https://developer.mozilla.org/Add-ons/WebExtensions/API/runtime/sendMessage)
+開いた日時は Firefox 起動中のタブ ID 順です。
 
-```javascript
-browser.runtime.sendMessage('{9a51d52f-40fa-44c6-9c62-66936e43c4db}', {
-  type: 'sort',
-  keyType: 'title',
-  windowId: 24,
-  pinned: false,
-  notification: false
-})
+「クリック先の範囲」は、グループ内のタブから実行するとそのグループ内だけをソートし、
+トップレベルのタブから実行するとトップレベルだけをソートします。
+「トップレベルと全グループ」は、各グループ内をそれぞれソートしたあと、
+トップレベルでグループを 1 つのまとまりとしてソートします。
+
+## 動作要件
+
+- Firefox 142 以降
+- Node.js 現行 LTS
+
+## 開発
+
+```sh
+npm install
+npm run lint
+npm run test
+npm run build
 ```
 
+アドオンのバージョンは `extension/manifest.json` で管理します。
+`npm run build` は `web-ext-artifacts/clicktabsort-<version>.zip` を作成します。
 
-#### extensionId
+`npm run run` は、この拡張機能を一時的に読み込んだ Firefox を起動します。
+拡張機能のソースは `extension/` にあります。
 
-`{9a51d52f-40fa-44c6-9c62-66936e43c4db}`
+## プライバシー
 
-
-#### message
-
-|Property name|Type|Description|
-|:--|:--|:--|
-|type|string|`sort`|
-|keyType|string|`url` or `urlReverse` or `title` or `titleReverse` or `id` or `idReverse` or `access` or `accessReverse` or `random` or `reverse`|
-|windowId|number|The ID of a target window|
-|pinned|boolean|If true, pinned tabs are sorted|
-|notification|boolean|Whether to show notification|
-
-## リリース方法
-
-```console
-$ web-ext build
-```
+この拡張機能はユーザーデータを収集または送信しません。
