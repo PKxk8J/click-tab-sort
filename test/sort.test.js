@@ -207,6 +207,25 @@ test('通知作成に失敗してもソートは完了する', async () => {
   assert.deepEqual(getTabIds(), [2, 1])
 })
 
+test('通知 API が後から有効になっても通知を送る', async () => {
+  const notificationsApi = globalThis.browser.notifications
+  globalThis.browser.notifications = undefined
+  const {
+    run: lazyRun,
+  } = await import('../extension/sort.js?lazy-notification')
+  globalThis.browser.notifications = notificationsApi
+
+  resetTabs([
+    { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
+    { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
+  ])
+
+  await lazyRun(1, 'title', false, true)
+
+  assert.deepEqual(getTabIds(), [2, 1])
+  assert.equal(state.notifications.length, 1)
+})
+
 test('未対応のソートキーではタブを移動しない', async () => {
   resetTabs([
     { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
