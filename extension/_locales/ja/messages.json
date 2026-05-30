@@ -1,4 +1,14 @@
 {
+  "debug": {
+    "message": "release",
+    "description": "Set 'debug' to display debug log"
+  },
+  "name": {
+    "message": "ClickTabSort"
+  },
+  "description": {
+    "message": "タブ右クリックメニューからタブをソートします。"
+  },
   "sort": {
     "message": "タブをソート"
   },
@@ -41,8 +51,20 @@
   "menuItems": {
     "message": "メニュー項目"
   },
-  "save": {
-    "message": "保存"
+  "settings": {
+    "message": "設定"
+  },
+  "feedback": {
+    "message": "フィードバック"
+  },
+  "saveStatusSaving": {
+    "message": "保存中..."
+  },
+  "saveStatusSaved": {
+    "message": "保存済み"
+  },
+  "saveStatusFailed": {
+    "message": "保存に失敗しました"
   },
   "sorting": {
     "message": "タブをソート中..."

@@ -6,6 +6,9 @@
   "name": {
     "message": "ClickTabSort"
   },
+  "description": {
+    "message": "Sort tabs from the right-click menu."
+  },
   "sort": {
     "message": "Sort Tabs"
   },
@@ -48,8 +51,20 @@
   "menuItems": {
     "message": "Menu Items"
   },
-  "save": {
-    "message": "Save"
+  "settings": {
+    "message": "Settings"
+  },
+  "feedback": {
+    "message": "Feedback"
+  },
+  "saveStatusSaving": {
+    "message": "Saving..."
+  },
+  "saveStatusSaved": {
+    "message": "Saved"
+  },
+  "saveStatusFailed": {
+    "message": "Save failed"
   },
   "sorting": {
     "message": "Sorting tabs..."
