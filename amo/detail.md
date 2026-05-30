@@ -2,14 +2,13 @@ ClickTabSort adds tab sorting commands to Firefox right-click menus.
 You can sort tabs from the tab context menu, or enable the same commands on page context menus from the settings page.
 
 Available sort orders:
-<ul>
-  <li>URL</li>
-  <li>Title</li>
-  <li>Opened date / opened date reverse</li>
-  <li>Accessed date / accessed date reverse</li>
-  <li>Random</li>
-  <li>Reverse order</li>
-</ul>
+
+- URL
+- Title
+- Opened date / opened date reverse
+- Accessed date / accessed date reverse
+- Random
+- Reverse order
 
 You can choose which sort items appear in the menu.
 When only one item is enabled, it is shown directly as a flat menu command.
@@ -28,11 +27,10 @@ Optional notifications can show progress and completion.
 The notification permission is requested only when notifications are enabled in settings.
 
 The screenshots show:
-<ul>
-  <li>Nested menu with multiple sort items enabled</li>
-  <li>Flat menu with one sort item enabled</li>
-  <li>Settings page</li>
-  <li>Completion notification</li>
-</ul>
 
-* Opened dates are inferred from Firefox tab IDs and are reset when Firefox starts.
+- Nested menu with multiple sort items enabled
+- Flat menu with one sort item enabled
+- Settings page
+- Completion notification
+
+Opened dates are inferred from Firefox tab IDs and are reset when Firefox starts.
