@@ -45,6 +45,18 @@
   "reverse": {
     "message": "Reverse Order"
   },
+  "currentArea": {
+    "message": "Clicked area"
+  },
+  "allGroups": {
+    "message": "Top level and all groups"
+  },
+  "currentGroupOnly": {
+    "message": "This group only"
+  },
+  "topLevelOnly": {
+    "message": "Top level only"
+  },
   "notification": {
     "message": "Notification"
   },

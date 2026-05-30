@@ -1,6 +1,7 @@
 import {
   ALL_CONTEXTS,
   ALL_MENU_ITEMS,
+  ALL_MENU_SCOPES,
   KEY_CONTEXTS,
   KEY_FEEDBACK,
   KEY_MENU_ITEMS,
@@ -29,6 +30,10 @@ const SAVE_STATUS_CLEAR_DELAY = 1800
 let savePromise
 let saveRequested = false
 let saveStatusVersion = 0
+
+function getMenuScopeInputId (key, scope) {
+  return KEY_MENU_ITEMS + '_' + key + '_' + scope
+}
 
 function setLabelText (id, key) {
   document.getElementById(id).textContent = i18n.getMessage(key)
@@ -67,9 +72,12 @@ async function restore () {
     document.getElementById(key).checked = contextSet.has(key)
   })
 
-  const menuItemSet = new Set(menuItems)
   ALL_MENU_ITEMS.forEach((key) => {
-    document.getElementById(key).checked = menuItemSet.has(key)
+    const scopeSet = new Set(menuItems[key] || [])
+    ALL_MENU_SCOPES.forEach((scope) => {
+      document.getElementById(getMenuScopeInputId(key, scope)).checked =
+        scopeSet.has(scope)
+    })
   })
 
   document.getElementById(KEY_NOTIFICATION).checked = notificationAllowed
@@ -93,10 +101,16 @@ async function save () {
     }
   })
 
-  const menuItems = []
+  const menuItems = {}
   ALL_MENU_ITEMS.forEach((key) => {
-    if (document.getElementById(key).checked) {
-      menuItems.push(key)
+    const scopes = []
+    ALL_MENU_SCOPES.forEach((scope) => {
+      if (document.getElementById(getMenuScopeInputId(key, scope)).checked) {
+        scopes.push(scope)
+      }
+    })
+    if (scopes.length > 0) {
+      menuItems[key] = scopes
     }
   })
 
@@ -161,7 +175,7 @@ function createSwitch (inputId) {
   return switchWrapper
 }
 
-function createToggleLabel (key) {
+function createToggleLabel (key, inputId = key, className = 'toggle-row') {
   const title = document.createElement('span')
   title.className = 'setting-title'
   title.textContent = i18n.getMessage(key)
@@ -171,15 +185,37 @@ function createToggleLabel (key) {
   copy.appendChild(title)
 
   const label = document.createElement('label')
-  label.className = 'toggle-row'
+  label.className = className
   label.appendChild(copy)
-  label.appendChild(createSwitch(key))
+  label.appendChild(createSwitch(inputId))
 
   return label
 }
 
-function addCheckboxEntry (key, container) {
-  container.appendChild(createToggleLabel(key))
+function addCheckboxEntry (key, container, inputId = key) {
+  container.appendChild(createToggleLabel(key, inputId))
+}
+
+function addScopeEntry (scope, container, inputId) {
+  container.appendChild(createToggleLabel(scope, inputId, 'mode-row'))
+}
+
+function addMenuItemEntry (key, container) {
+  const title = document.createElement('h3')
+  title.textContent = i18n.getMessage(key)
+
+  const scopeList = document.createElement('div')
+  scopeList.className = 'mode-list'
+  ALL_MENU_SCOPES.forEach((scope) => {
+    addScopeEntry(scope, scopeList, getMenuScopeInputId(key, scope))
+  })
+
+  const item = document.createElement('article')
+  item.className = 'menu-item'
+  item.appendChild(title)
+  item.appendChild(scopeList)
+
+  container.appendChild(item)
 }
 
 function bindAutoSave () {
@@ -208,7 +244,7 @@ async function init () {
   ALL_CONTEXTS.forEach((key) => addCheckboxEntry(key, contextContainer))
 
   const itemContainer = document.getElementById(KEY_MENU_ITEMS)
-  ALL_MENU_ITEMS.forEach((key) => addCheckboxEntry(key, itemContainer))
+  ALL_MENU_ITEMS.forEach((key) => addMenuItemEntry(key, itemContainer))
 
   const notificationContainer = document.getElementById('notificationSetting')
   addCheckboxEntry(KEY_NOTIFICATION, notificationContainer)

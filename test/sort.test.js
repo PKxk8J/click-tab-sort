@@ -5,6 +5,7 @@ const state = {
   currentWindowId: 1,
   tabs: [],
   moved: [],
+  groupMoved: [],
   notifications: [],
   notificationAllowed: true,
   notificationError: undefined,
@@ -17,6 +18,7 @@ function cloneTab (tab) {
 function resetTabs (tabs) {
   state.tabs = tabs.map(cloneTab)
   state.moved = []
+  state.groupMoved = []
   state.notifications = []
   state.notificationAllowed = true
   state.notificationError = undefined
@@ -32,15 +34,41 @@ function getTabIds (windowId = 1) {
   return getWindowTabs(windowId).map((tab) => tab.id)
 }
 
-function moveTab (id, index) {
-  const tab = state.tabs.find((item) => item.id === id)
-  const windowTabs = getWindowTabs(tab.windowId).filter((item) => item.id !== id)
-  const targetIndex = Math.max(0, Math.min(index, windowTabs.length))
-  windowTabs.splice(targetIndex, 0, tab)
-  windowTabs.forEach((item, itemIndex) => {
+function moveTabIds (ids, index) {
+  const idList = Array.isArray(ids) ? ids : [ids]
+  const tab = state.tabs.find((item) => item.id === idList[0])
+  const idSet = new Set(idList)
+  const windowTabs = getWindowTabs(tab.windowId)
+  const movingTabs = windowTabs.filter((item) => idSet.has(item.id))
+  const keepTabs = windowTabs.filter((item) => !idSet.has(item.id))
+  const targetIndex = Math.max(0, Math.min(index, keepTabs.length))
+  keepTabs.splice(targetIndex, 0, ...movingTabs)
+  keepTabs.forEach((item, itemIndex) => {
     item.index = itemIndex
   })
-  state.moved.push({ id, index })
+  state.moved.push({ ids: idList, index })
+}
+
+function moveGroup (groupId, index) {
+  const groupTab = state.tabs.find((tab) => tab.groupId === groupId)
+  const ids = getWindowTabs(groupTab.windowId).
+    filter((tab) => tab.groupId === groupId).
+    map((tab) => tab.id)
+  moveTabIds(ids, index)
+  state.groupMoved.push({ groupId, index })
+}
+
+function withDefaults (tab) {
+  return {
+    groupId: -1,
+    splitViewId: -1,
+    cookieStoreId: 'firefox-default',
+    ...tab,
+  }
+}
+
+function resetTabsWithDefaults (tabs) {
+  resetTabs(tabs.map(withDefaults))
 }
 
 globalThis.browser = {
@@ -73,7 +101,15 @@ globalThis.browser = {
   storage: {
     sync: {},
   },
+  tabGroups: {
+    TAB_GROUP_ID_NONE: -1,
+    move: async (groupId, properties) => {
+      moveGroup(groupId, properties.index)
+      return { id: groupId }
+    },
+  },
   tabs: {
+    SPLIT_VIEW_ID_NONE: -1,
     query: async (query) => {
       let result = state.tabs
       if (query.windowId !== undefined) {
@@ -88,8 +124,11 @@ globalThis.browser = {
       return result.map(cloneTab)
     },
     move: async (id, properties) => {
-      moveTab(id, properties.index)
-      return cloneTab(state.tabs.find((tab) => tab.id === id))
+      moveTabIds(id, properties.index)
+      const idList = Array.isArray(id) ? id : [id]
+      return idList.map((tabId) => cloneTab(
+        state.tabs.find((tab) => tab.id === tabId),
+      ))
     },
   },
 }
@@ -110,12 +149,20 @@ test('対応しているメニューコンテキストだけを残してコン�
 })
 
 test('対応しているメニュー項目だけを残してメニュー項目を正規化する', () => {
-  assert.deepEqual(normalizeMenuItems(undefined), ['url', 'title'])
-  assert.deepEqual(normalizeMenuItems(['title', 'unknown', 'url']), [
-    'url',
-    'title',
-  ])
-  assert.deepEqual(normalizeMenuItems('url'), [])
+  assert.deepEqual(normalizeMenuItems(undefined), {
+    url: ['currentArea'],
+    title: ['currentArea'],
+  })
+  assert.deepEqual(normalizeMenuItems(['title', 'unknown', 'url']), {
+    url: ['currentArea'],
+    title: ['currentArea'],
+  })
+  assert.deepEqual(normalizeMenuItems({
+    title: ['allGroups', 'unknown', 'currentArea'],
+  }), {
+    title: ['currentArea', 'allGroups'],
+  })
+  assert.deepEqual(normalizeMenuItems('url'), {})
 })
 
 test('通知設定を真偽値に正規化する', () => {
@@ -125,7 +172,7 @@ test('通知設定を真偽値に正規化する', () => {
 })
 
 test('固定タブ以外から実行した場合は固定タブを残して通常タブだけをソートする', async () => {
-  resetTabs([
+  resetTabsWithDefaults([
     { id: 1, windowId: 1, index: 0, pinned: true, url: 'https://z.example/', title: 'Z', lastAccessed: 30 },
     { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
     { id: 3, windowId: 1, index: 2, pinned: false, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
@@ -137,7 +184,7 @@ test('固定タブ以外から実行した場合は固定タブを残して通�
 })
 
 test('固定タブから実行した場合は固定タブだけをソートする', async () => {
-  resetTabs([
+  resetTabsWithDefaults([
     { id: 1, windowId: 1, index: 0, pinned: true, url: 'https://z.example/', title: 'Z', lastAccessed: 30 },
     { id: 2, windowId: 1, index: 1, pinned: true, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
     { id: 3, windowId: 1, index: 2, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
@@ -149,7 +196,7 @@ test('固定タブから実行した場合は固定タブだけをソートす�
 })
 
 test('今の逆順では通常タブの現在順だけを反転する', async () => {
-  resetTabs([
+  resetTabsWithDefaults([
     { id: 1, windowId: 1, index: 0, pinned: true, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
     { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
     { id: 3, windowId: 1, index: 2, pinned: false, url: 'https://c.example/', title: 'C', lastAccessed: 30 },
@@ -162,7 +209,7 @@ test('今の逆順では通常タブの現在順だけを反転する', async ()
 })
 
 test('通知が有効で権限がある場合は完了通知を送る', async () => {
-  resetTabs([
+  resetTabsWithDefaults([
     { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
     { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
   ])
@@ -178,7 +225,7 @@ test('通知が有効で権限がある場合は完了通知を送る', async ()
 })
 
 test('通知権限がない場合は通知せずにソートする', async () => {
-  resetTabs([
+  resetTabsWithDefaults([
     { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
     { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
   ])
@@ -191,7 +238,7 @@ test('通知権限がない場合は通知せずにソートする', async () =>
 })
 
 test('通知作成に失敗してもソートは完了する', async () => {
-  resetTabs([
+  resetTabsWithDefaults([
     { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
     { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
   ])
@@ -215,7 +262,7 @@ test('通知 API が後から有効になっても通知を送る', async () => 
   } = await import('../extension/sort.js?lazy-notification')
   globalThis.browser.notifications = notificationsApi
 
-  resetTabs([
+  resetTabsWithDefaults([
     { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
     { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
   ])
@@ -226,8 +273,86 @@ test('通知 API が後から有効になっても通知を送る', async () => 
   assert.equal(state.notifications.length, 1)
 })
 
+test('クリック先の範囲ではグループ内タブから実行した場合にそのグループ内だけをソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://z.example/', title: 'Z', lastAccessed: 40 },
+    { id: 2, windowId: 1, index: 1, pinned: false, groupId: 10, url: 'https://c.example/', title: 'C', lastAccessed: 30 },
+    { id: 3, windowId: 1, index: 2, pinned: false, groupId: 10, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
+    { id: 4, windowId: 1, index: 3, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
+  ])
+
+  await run(1, 'url', false, false, 'currentArea', 2)
+
+  assert.deepEqual(getTabIds(), [1, 3, 2, 4])
+  assert.deepEqual(state.groupMoved, [])
+})
+
+test('クリック先の範囲ではトップレベルから実行した場合にグループをブロックとしてトップレベルをソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://c.example/', title: 'C', lastAccessed: 40 },
+    { id: 2, windowId: 1, index: 1, pinned: false, groupId: 10, url: 'https://b.example/', title: 'B', lastAccessed: 30 },
+    { id: 3, windowId: 1, index: 2, pinned: false, groupId: 10, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
+    { id: 4, windowId: 1, index: 3, pinned: false, url: 'https://aa.example/', title: 'AA', lastAccessed: 20 },
+  ])
+
+  await run(1, 'url', false, false, 'currentArea', 1)
+
+  assert.deepEqual(getTabIds(), [4, 2, 3, 1])
+  assert.deepEqual(state.groupMoved, [{ groupId: 10, index: 1 }])
+})
+
+test('トップレベルと全グループでは各グループ内とトップレベルをどちらもソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://z.example/', title: 'Z', lastAccessed: 60 },
+    { id: 2, windowId: 1, index: 1, pinned: false, groupId: 10, url: 'https://c.example/', title: 'C', lastAccessed: 50 },
+    { id: 3, windowId: 1, index: 2, pinned: false, groupId: 10, url: 'https://b.example/', title: 'B', lastAccessed: 40 },
+    { id: 4, windowId: 1, index: 3, pinned: false, url: 'https://d.example/', title: 'D', lastAccessed: 30 },
+    { id: 5, windowId: 1, index: 4, pinned: false, groupId: 20, url: 'https://e.example/', title: 'E', lastAccessed: 20 },
+    { id: 6, windowId: 1, index: 5, pinned: false, groupId: 20, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
+  ])
+
+  await run(1, 'url', false, false, 'allGroups', 1)
+
+  assert.deepEqual(getTabIds(), [6, 5, 3, 2, 4, 1])
+})
+
+test('分割ビューは内部順を保ったブロックとしてグループ内でソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, groupId: 10, splitViewId: 7, url: 'https://c.example/', title: 'C', lastAccessed: 30 },
+    { id: 2, windowId: 1, index: 1, pinned: false, groupId: 10, splitViewId: 7, url: 'https://z.example/', title: 'Z', lastAccessed: 40 },
+    { id: 3, windowId: 1, index: 2, pinned: false, groupId: 10, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
+  ])
+
+  await run(1, 'url', false, false, 'currentArea', 1)
+
+  assert.deepEqual(getTabIds(), [3, 1, 2])
+})
+
+test('分割ビューは内部順を保ったブロックとしてトップレベルでソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, splitViewId: 7, url: 'https://c.example/', title: 'C', lastAccessed: 30 },
+    { id: 2, windowId: 1, index: 1, pinned: false, splitViewId: 7, url: 'https://z.example/', title: 'Z', lastAccessed: 40 },
+    { id: 3, windowId: 1, index: 2, pinned: false, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
+  ])
+
+  await run(1, 'url', false, false, 'currentArea', 3)
+
+  assert.deepEqual(getTabIds(), [3, 1, 2])
+})
+
+test('コンテナ違いのタブも同じソート範囲では通常通りソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, cookieStoreId: 'firefox-container-1', url: 'https://b.example/', title: 'B', lastAccessed: 20 },
+    { id: 2, windowId: 1, index: 1, pinned: false, cookieStoreId: 'firefox-default', url: 'https://a.example/', title: 'A', lastAccessed: 10 },
+  ])
+
+  await run(1, 'url', false, false, 'currentArea', 1)
+
+  assert.deepEqual(getTabIds(), [2, 1])
+})
+
 test('未対応のソートキーではタブを移動しない', async () => {
-  resetTabs([
+  resetTabsWithDefaults([
     { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
     { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
   ])

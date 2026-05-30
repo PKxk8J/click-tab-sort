@@ -20,6 +20,11 @@ export const KEY_ACCESS_REV = 'accessReverse'
 export const KEY_RAND = 'random'
 export const KEY_REV = 'reverse'
 
+export const KEY_CURRENT_AREA = 'currentArea'
+export const KEY_ALL_GROUPS = 'allGroups'
+export const KEY_CURRENT_GROUP_ONLY = 'currentGroupOnly'
+export const KEY_TOP_LEVEL_ONLY = 'topLevelOnly'
+
 export const KEY_SORT = 'sort'
 export const KEY_SORT_BY = 'sortBy'
 export const KEY_CONTEXTS = 'contexts'
@@ -49,7 +54,11 @@ export const ALL_MENU_ITEMS = [
   KEY_RAND,
   KEY_REV,
 ]
-export const DEFAULT_MENU_ITEMS = [KEY_URL, KEY_TITLE]
+export const ALL_MENU_SCOPES = [KEY_CURRENT_AREA, KEY_ALL_GROUPS]
+export const DEFAULT_MENU_ITEMS = {
+  [KEY_URL]: [KEY_CURRENT_AREA],
+  [KEY_TITLE]: [KEY_CURRENT_AREA],
+}
 export const DEFAULT_NOTIFICATION = false
 
 export const NOTIFICATION_PERMISSION = {
@@ -82,6 +91,17 @@ function cloneKeys (keys) {
   return [...keys]
 }
 
+function cloneMenuItems (menuItems) {
+  const normalized = {}
+  for (const key of ALL_MENU_ITEMS) {
+    const scopes = menuItems[key]
+    if (Array.isArray(scopes) && scopes.length > 0) {
+      normalized[key] = [...scopes]
+    }
+  }
+  return normalized
+}
+
 export function normalizeContexts (contexts) {
   if (contexts === undefined) {
     return cloneKeys(DEFAULT_CONTEXTS)
@@ -96,14 +116,37 @@ export function normalizeContexts (contexts) {
 
 export function normalizeMenuItems (menuItems) {
   if (menuItems === undefined) {
-    return cloneKeys(DEFAULT_MENU_ITEMS)
+    return cloneMenuItems(DEFAULT_MENU_ITEMS)
   }
 
-  if (!Array.isArray(menuItems)) {
-    return []
+  if (Array.isArray(menuItems)) {
+    const normalized = {}
+    for (const key of ALL_MENU_ITEMS) {
+      if (menuItems.includes(key)) {
+        normalized[key] = [KEY_CURRENT_AREA]
+      }
+    }
+    return normalized
   }
 
-  return ALL_MENU_ITEMS.filter((key) => menuItems.includes(key))
+  if (!menuItems || typeof menuItems !== 'object') {
+    return {}
+  }
+
+  const normalized = {}
+  for (const key of ALL_MENU_ITEMS) {
+    const scopes = menuItems[key]
+    if (!Array.isArray(scopes)) {
+      continue
+    }
+
+    const normalizedScopes = ALL_MENU_SCOPES.
+      filter((scope) => scopes.includes(scope))
+    if (normalizedScopes.length > 0) {
+      normalized[key] = normalizedScopes
+    }
+  }
+  return normalized
 }
 
 export function normalizeNotification (notification) {

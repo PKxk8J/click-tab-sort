@@ -45,6 +45,18 @@
   "reverse": {
     "message": "今の逆順"
   },
+  "currentArea": {
+    "message": "クリック先の範囲"
+  },
+  "allGroups": {
+    "message": "トップレベルと全グループ"
+  },
+  "currentGroupOnly": {
+    "message": "このグループだけ"
+  },
+  "topLevelOnly": {
+    "message": "トップレベルだけ"
+  },
   "notification": {
     "message": "通知"
   },

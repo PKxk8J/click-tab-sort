@@ -93,7 +93,9 @@ h2 {
   padding-block-start: 10px;
 }
 
-.toggle-list {
+.toggle-list,
+.menu-list,
+.mode-list {
   display: grid;
   gap: 10px;
 }
@@ -119,6 +121,39 @@ h2 {
   display: block;
   overflow-wrap: anywhere;
   font-weight: 560;
+}
+
+.menu-item {
+  display: grid;
+  gap: 14px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.menu-item:hover {
+  background: var(--surface-hover);
+}
+
+.menu-item h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 680;
+}
+
+.mode-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  min-block-size: 42px;
+  cursor: pointer;
+}
+
+.mode-row + .mode-row {
+  padding-block-start: 10px;
+  border-block-start: 1px solid var(--border);
 }
 
 .switch {
