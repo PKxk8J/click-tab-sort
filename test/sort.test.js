@@ -9,6 +9,8 @@ const state = {
   notifications: [],
   notificationAllowed: true,
   notificationError: undefined,
+  forceGroupOnTabMove: undefined,
+  ungrouped: [],
 }
 
 function cloneTab (tab) {
@@ -22,6 +24,8 @@ function resetTabs (tabs) {
   state.notifications = []
   state.notificationAllowed = true
   state.notificationError = undefined
+  state.forceGroupOnTabMove = undefined
+  state.ungrouped = []
 }
 
 function getWindowTabs (windowId) {
@@ -34,9 +38,13 @@ function getTabIds (windowId = 1) {
   return getWindowTabs(windowId).map((tab) => tab.id)
 }
 
-function moveTabIds (ids, index) {
+function moveTabIds (ids, index, simulateGroupAttachment = false) {
   const idList = Array.isArray(ids) ? ids : [ids]
   const tab = state.tabs.find((item) => item.id === idList[0])
+  const topLevelIds = new Set(idList.filter((id) => {
+    const target = state.tabs.find((item) => item.id === id)
+    return target?.groupId === -1
+  }))
   const idSet = new Set(idList)
   const windowTabs = getWindowTabs(tab.windowId)
   const movingTabs = windowTabs.filter((item) => idSet.has(item.id))
@@ -46,6 +54,15 @@ function moveTabIds (ids, index) {
   keepTabs.forEach((item, itemIndex) => {
     item.index = itemIndex
   })
+
+  if (simulateGroupAttachment && state.forceGroupOnTabMove !== undefined) {
+    state.tabs.forEach((item) => {
+      if (topLevelIds.has(item.id)) {
+        item.groupId = state.forceGroupOnTabMove
+      }
+    })
+  }
+
   state.moved.push({ ids: idList, index })
 }
 
@@ -124,11 +141,20 @@ globalThis.browser = {
       return result.map(cloneTab)
     },
     move: async (id, properties) => {
-      moveTabIds(id, properties.index)
+      moveTabIds(id, properties.index, true)
       const idList = Array.isArray(id) ? id : [id]
       return idList.map((tabId) => cloneTab(
         state.tabs.find((tab) => tab.id === tabId),
       ))
+    },
+    ungroup: async (ids) => {
+      const idList = Array.isArray(ids) ? ids : [ids]
+      state.ungrouped.push(...idList)
+      state.tabs.forEach((tab) => {
+        if (idList.includes(tab.id)) {
+          tab.groupId = -1
+        }
+      })
     },
   },
 }
@@ -349,6 +375,21 @@ test('コンテナ違いのタブも同じソート範囲では通常通りソ�
   await run(1, 'url', false, false, 'currentArea', 1)
 
   assert.deepEqual(getTabIds(), [2, 1])
+})
+
+test('トップレベルソート中にタブがグループへ吸着した場合はトップレベルへ戻す', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, groupId: 10, splitViewId: 7, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
+    { id: 2, windowId: 1, index: 1, pinned: false, groupId: 10, splitViewId: 7, url: 'https://z.example/', title: 'Z', lastAccessed: 30 },
+    { id: 3, windowId: 1, index: 2, pinned: false, url: 'https://a.example/', title: 'A', lastAccessed: 10 },
+  ])
+  state.forceGroupOnTabMove = 10
+
+  await run(1, 'url', false, false, 'currentArea', 3)
+
+  assert.deepEqual(getTabIds(), [3, 1, 2])
+  assert.equal(state.tabs.find((tab) => tab.id === 3).groupId, -1)
+  assert.deepEqual(state.ungrouped, [3])
 })
 
 test('未対応のソートキーではタブを移動しない', async () => {

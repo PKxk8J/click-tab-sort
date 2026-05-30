@@ -208,7 +208,25 @@ async function moveUnit (unit, index) {
   debug('Tabs ' + ids.join(',') + ' were moved to ' + index)
 }
 
-async function rearrangeUnits (curOrder, idealOrder, progress) {
+async function restoreTopLevelMembership (windowId, topLevelTabIds) {
+  if (topLevelTabIds.size <= 0 || typeof tabs.ungroup !== 'function') {
+    return
+  }
+
+  const tabList = await tabs.query({ windowId })
+  const attachedIds = tabList.
+    filter((tab) => topLevelTabIds.has(tab.id) && isGroupedTab(tab)).
+    map((tab) => tab.id)
+  if (attachedIds.length <= 0) {
+    return
+  }
+
+  await tabs.ungroup(attachedIds)
+  debug('Tabs ' + attachedIds.join(',') + ' were restored to top level')
+}
+
+async function rearrangeUnits (curOrder, idealOrder, progress,
+  afterMove = async () => {}) {
   if (curOrder.length <= 0 || idealOrder.length <= 0) {
     return
   }
@@ -282,6 +300,7 @@ async function rearrangeUnits (curOrder, idealOrder, progress) {
     movePairs.reduce((sum, [unit]) => sum + unit.tabs.length, 0)
   for (const [unit, index] of movePairs) {
     await moveUnit(unit, index)
+    await afterMove()
     progress.done += unit.tabs.length
   }
 }
@@ -343,7 +362,12 @@ async function sortAllGroups (windowId, sortPinned, comparator, progress) {
 async function sortTopLevel (windowId, sortPinned, comparator, progress) {
   const tabList = await querySortedTabsInSegment(windowId, sortPinned, progress)
   const units = buildTopLevelUnits(tabList)
-  await rearrangeUnits(units, sortUnits(units, comparator), progress)
+  const topLevelTabIds = new Set(units.
+    filter((unit) => unit.type !== 'group').
+    flatMap((unit) => unit.tabs.map((tab) => tab.id)))
+  const restore = () => restoreTopLevelMembership(windowId, topLevelTabIds)
+  await rearrangeUnits(units, sortUnits(units, comparator), progress, restore)
+  await restore()
 }
 
 async function sortTabs (windowId, comparator, sortPinned, scope, targetTabId,
