@@ -38,6 +38,17 @@ function getTabIds (windowId = 1) {
   return getWindowTabs(windowId).map((tab) => tab.id)
 }
 
+function getMemberships () {
+  return [...state.tabs].
+    sort((tab1, tab2) => tab1.id - tab2.id).
+    map((tab) => ({
+      id: tab.id,
+      groupId: tab.groupId,
+      splitViewId: tab.splitViewId,
+      cookieStoreId: tab.cookieStoreId,
+    }))
+}
+
 function moveTabIds (ids, index, simulateGroupAttachment = false) {
   const idList = Array.isArray(ids) ? ids : [ids]
   const tab = state.tabs.find((item) => item.id === idList[0])
@@ -375,6 +386,44 @@ test('コンテナ違いのタブも同じソート範囲では通常通りソ�
   await run(1, 'url', false, false, 'currentArea', 1)
 
   assert.deepEqual(getTabIds(), [2, 1])
+})
+
+test('全グループソート後もグループ・分割ビュー・コンテナの所属を保つ', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, cookieStoreId: 'firefox-container-1', url: 'https://h.example/', title: 'H', lastAccessed: 90 },
+    { id: 2, windowId: 1, index: 1, pinned: false, groupId: 10, splitViewId: 7, url: 'https://e.example/', title: 'E', lastAccessed: 80 },
+    { id: 3, windowId: 1, index: 2, pinned: false, groupId: 10, splitViewId: 7, url: 'https://z.example/', title: 'Z', lastAccessed: 70 },
+    { id: 4, windowId: 1, index: 3, pinned: false, groupId: 10, cookieStoreId: 'firefox-container-2', url: 'https://a.example/', title: 'A', lastAccessed: 60 },
+    { id: 5, windowId: 1, index: 4, pinned: false, splitViewId: 8, url: 'https://c.example/', title: 'C', lastAccessed: 50 },
+    { id: 6, windowId: 1, index: 5, pinned: false, splitViewId: 8, url: 'https://y.example/', title: 'Y', lastAccessed: 40 },
+    { id: 7, windowId: 1, index: 6, pinned: false, groupId: 20, url: 'https://b.example/', title: 'B', lastAccessed: 30 },
+    { id: 8, windowId: 1, index: 7, pinned: false, groupId: 20, url: 'https://d.example/', title: 'D', lastAccessed: 20 },
+    { id: 9, windowId: 1, index: 8, pinned: false, url: 'https://f.example/', title: 'F', lastAccessed: 10 },
+  ])
+  const memberships = getMemberships()
+
+  await run(1, 'url', false, false, 'allGroups', 1)
+
+  assert.deepEqual(getTabIds(), [4, 2, 3, 7, 8, 5, 6, 9, 1])
+  assert.deepEqual(getMemberships(), memberships)
+})
+
+test('トップレベル分割ビューがグループへ吸着しても所属不変条件を保つ', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://c.example/', title: 'C', lastAccessed: 50 },
+    { id: 2, windowId: 1, index: 1, pinned: false, groupId: 10, splitViewId: 7, url: 'https://b.example/', title: 'B', lastAccessed: 40 },
+    { id: 3, windowId: 1, index: 2, pinned: false, groupId: 10, splitViewId: 7, url: 'https://z.example/', title: 'Z', lastAccessed: 30 },
+    { id: 4, windowId: 1, index: 3, pinned: false, splitViewId: 8, url: 'https://a.example/', title: 'A', lastAccessed: 20 },
+    { id: 5, windowId: 1, index: 4, pinned: false, splitViewId: 8, url: 'https://y.example/', title: 'Y', lastAccessed: 10 },
+  ])
+  const memberships = getMemberships()
+  state.forceGroupOnTabMove = 10
+
+  await run(1, 'url', false, false, 'currentArea', 1)
+
+  assert.deepEqual(getTabIds(), [4, 5, 2, 3, 1])
+  assert.deepEqual(getMemberships(), memberships)
+  assert.deepEqual(state.ungrouped, [4, 5])
 })
 
 test('トップレベルソート中にタブがグループへ吸着した場合はトップレベルへ戻す', async () => {
