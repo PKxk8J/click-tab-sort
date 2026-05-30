@@ -26,11 +26,4 @@ Containers are ignored when sorting.
 Optional notifications can show progress and completion.
 The notification permission is requested only when notifications are enabled in settings.
 
-The screenshots show:
-
-- Nested menu with multiple sort items enabled
-- Flat menu with one sort item enabled
-- Settings page
-- Completion notification
-
 Opened dates are inferred from Firefox tab IDs and are reset when Firefox starts.
