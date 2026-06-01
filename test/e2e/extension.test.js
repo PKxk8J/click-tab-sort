@@ -102,9 +102,181 @@ async function runExtensionScript (script, ...args) {
   `, ...args)
 
   if (!result.ok) {
-    throw new Error(result.stack || result.message)
+    throw new Error([result.message, result.stack].filter(Boolean).join('\n'))
   }
   return result.value
+}
+
+async function runSortFixture (scenarioScript) {
+  return await runExtensionScript(`
+    const { run } = await import(browser.runtime.getURL('sort.js'))
+    const token = 'click-tab-sort-e2e-' + Date.now() + '-' + Math.random()
+    const windowIds = []
+
+    const makeUrl = suffix => 'about:blank#' + token + '-' + suffix
+    const tabId = tab => typeof tab === 'number' ? tab : tab.id
+    const pickTabState = tab => ({
+      id: tab.id,
+      url: tab.url,
+      index: tab.index,
+      pinned: tab.pinned,
+      groupId: tab.groupId,
+      splitViewId: tab.splitViewId,
+    })
+
+    async function createWindowTabs (suffixes) {
+      const urls = suffixes.map(makeUrl)
+      const testWindow = await browser.windows.create({
+        focused: true,
+        url: urls[0],
+      })
+      windowIds.push(testWindow.id)
+
+      const initialTabs = testWindow.tabs ||
+        await browser.tabs.query({ windowId: testWindow.id })
+      const tabs = [
+        [...initialTabs].sort((tab1, tab2) => tab1.index - tab2.index)[0],
+      ]
+      for (const url of urls.slice(1)) {
+        tabs.push(await browser.tabs.create({
+          active: false,
+          windowId: testWindow.id,
+          url,
+        }))
+      }
+
+      const tabIds = tabs.map(tab => tab.id)
+      const settledTabs = await waitUntil(async () => {
+        const currentTabs = []
+        for (const id of tabIds) {
+          const tab = await browser.tabs.get(id).catch(() => null)
+          if (!tab) {
+            return
+          }
+          currentTabs.push(tab)
+        }
+        return currentTabs.every((tab, index) => tab.url === urls[index]) &&
+          currentTabs
+      }, 10000)
+      if (!settledTabs) {
+        throw new Error('created tab URLs did not settle')
+      }
+
+      return {
+        windowId: testWindow.id,
+        tabs: settledTabs,
+        tabIds,
+        urls,
+      }
+    }
+
+    async function updateTabs (tabs, properties) {
+      const ids = tabs.map(tabId)
+      for (const id of ids) {
+        await browser.tabs.update(id, properties)
+      }
+
+      const updatedTabs = await waitUntil(async () => {
+        const currentTabs = []
+        for (const id of ids) {
+          const tab = await browser.tabs.get(id).catch(() => null)
+          if (!tab) {
+            return
+          }
+          currentTabs.push(tab)
+        }
+        if (properties.pinned !== undefined &&
+            !currentTabs.every(tab => tab.pinned === properties.pinned)) {
+          return
+        }
+        return currentTabs
+      }, 10000)
+      if (!updatedTabs) {
+        throw new Error('tab updates did not settle')
+      }
+      return updatedTabs
+    }
+
+    async function groupTabs (tabs) {
+      if (typeof browser.tabs.group !== 'function') {
+        throw new Error('browser.tabs.group is not available')
+      }
+
+      const ids = tabs.map(tabId)
+      const sourceTab = await browser.tabs.get(ids[0])
+      const groupId = await browser.tabs.group({
+        createProperties: {
+          windowId: sourceTab.windowId,
+        },
+        tabIds: ids,
+      })
+      if (typeof browser.tabGroups?.update === 'function') {
+        await browser.tabGroups.update(groupId, { collapsed: false }).
+          catch(() => {})
+      }
+      const groupedTabs = await waitUntil(async () => {
+        const currentTabs = []
+        for (const id of ids) {
+          const tab = await browser.tabs.get(id).catch(() => null)
+          if (!tab) {
+            return
+          }
+          currentTabs.push(tab)
+        }
+        return currentTabs.every(tab => tab.groupId === groupId) &&
+          currentTabs
+      }, 10000)
+      if (!groupedTabs) {
+        throw new Error('tab group creation did not settle')
+      }
+      return { groupId, tabs: groupedTabs }
+    }
+
+    async function getOrderedTabs (windowId, tabIds) {
+      const tabIdSet = new Set(tabIds)
+      const tabs = await browser.tabs.query({ windowId })
+      return tabs.
+        filter(tab => tabIdSet.has(tab.id)).
+        sort((tab1, tab2) => tab1.index - tab2.index)
+    }
+
+    async function waitForOrder (windowId, tabIds, suffixes) {
+      const expectedUrls = suffixes.map(makeUrl)
+      const orderedTabs = await waitUntil(async () => {
+        const tabs = await getOrderedTabs(windowId, tabIds)
+        if (tabs.length !== tabIds.length) {
+          return
+        }
+
+        const orderedUrls = tabs.map(tab => tab.url)
+        return orderedUrls.join('\\n') === expectedUrls.join('\\n') && tabs
+      }, 10000)
+      if (!orderedTabs) {
+        const actual = await getOrderedTabs(windowId, tabIds)
+        const direct = []
+        for (const id of tabIds) {
+          direct.push(await browser.tabs.get(id).catch(error => ({
+            error: error?.message || String(error),
+            id,
+          })))
+        }
+        throw new Error(
+          'expected tab order ' + suffixes.join(', ') +
+          ', got ' + actual.map(tab => tab.url).join(', ') +
+          ', direct ' + JSON.stringify(direct.map(pickTabState)),
+        )
+      }
+      return orderedTabs.map(pickTabState)
+    }
+
+    try {
+      ${scenarioScript}
+    } finally {
+      for (const windowId of windowIds.reverse()) {
+        await browser.windows.remove(windowId).catch(() => {})
+      }
+    }
+  `)
 }
 
 async function getStorageData () {
@@ -192,73 +364,165 @@ describe('Firefox extension E2E', () => {
   test('run sorts tabs by URL in Firefox', async () => {
     await openFreshOptionsPage()
 
-    const result = await runExtensionScript(`
-      const { run } = await import(browser.runtime.getURL('sort.js'))
-      const token = 'click-tab-sort-e2e-' + Date.now() + '-' + Math.random()
-      const tabUrls = [
-        'about:blank#' + token + '-c',
-        'about:blank#' + token + '-a',
-        'about:blank#' + token + '-b',
-      ]
-      const expectedUrls = [...tabUrls].sort((url1, url2) =>
-        url1.localeCompare(url2))
-      const createdTabs = []
+    const result = await runSortFixture(`
+      const { windowId, tabs, tabIds } = await createWindowTabs(['c', 'a', 'b'])
 
-      try {
-        for (const url of tabUrls) {
-          createdTabs.push(await browser.tabs.create({
-            active: false,
-            url,
-          }))
-        }
+      await run(windowId, 'url', false, false, 'currentArea', tabs[0].id)
+      const ordered = await waitForOrder(windowId, tabIds, ['a', 'b', 'c'])
 
-        const sourceWindowId = createdTabs[0].windowId
-        const createdTabIds = new Set(createdTabs.map(tab => tab.id))
-        const ready = await waitUntil(async () => {
-          const tabs = []
-          for (const tab of createdTabs) {
-            tabs.push(await browser.tabs.get(tab.id).catch(() => null))
-          }
-          return tabs.every((tab, index) => tab?.url === tabUrls[index])
-        })
-        if (!ready) {
-          throw new Error('created tab URLs did not settle')
-        }
-
-        await run(sourceWindowId, 'url', false, false, 'currentArea',
-          createdTabs[0].id)
-
-        const sorted = await waitUntil(async () => {
-          const tabs = await browser.tabs.query({
-            windowId: sourceWindowId,
-          })
-          const ordered = tabs.
-            filter(tab => createdTabIds.has(tab.id)).
-            sort((tab1, tab2) => tab1.index - tab2.index)
-          if (ordered.length !== createdTabs.length) {
-            return
-          }
-
-          const orderedUrls = ordered.map(tab => tab.url)
-          if (orderedUrls.join('\\n') === expectedUrls.join('\\n')) {
-            return ordered
-          }
-        })
-        if (!sorted) {
-          throw new Error('created tabs were not sorted by URL')
-        }
-
-        return {
-          expectedUrls,
-          orderedUrls: sorted.map(tab => tab.url),
-        }
-      } finally {
-        for (const tab of createdTabs) {
-          await browser.tabs.remove(tab.id).catch(() => {})
-        }
+      return {
+        expectedUrls: ['a', 'b', 'c'].map(makeUrl),
+        orderedUrls: ordered.map(tab => tab.url),
       }
     `)
 
     assert.deepEqual(result.orderedUrls, result.expectedUrls)
   })
+
+  test('run sorts only the pinned or unpinned segment in Firefox', async () => {
+    await openFreshOptionsPage()
+
+    const result = await runSortFixture(`
+      const { windowId, tabs, tabIds } = await createWindowTabs([
+        'z-pinned',
+        'a-pinned',
+        'c-normal',
+        'b-normal',
+      ])
+      await updateTabs([tabs[0], tabs[1]], { pinned: true })
+
+      await run(windowId, 'url', false, false, 'currentArea', tabs[2].id)
+      const afterNormalSort = await waitForOrder(windowId, tabIds, [
+        'z-pinned',
+        'a-pinned',
+        'b-normal',
+        'c-normal',
+      ])
+
+      await run(windowId, 'url', true, false, 'currentArea', tabs[0].id)
+      const afterPinnedSort = await waitForOrder(windowId, tabIds, [
+        'a-pinned',
+        'z-pinned',
+        'b-normal',
+        'c-normal',
+      ])
+
+      return { afterNormalSort, afterPinnedSort }
+    `)
+
+    assert.deepEqual(result.afterNormalSort.map((tab) => tab.pinned), [
+      true,
+      true,
+      false,
+      false,
+    ])
+    assert.deepEqual(result.afterPinnedSort.map((tab) => tab.pinned), [
+      true,
+      true,
+      false,
+      false,
+    ])
+  })
+
+  test('run sorts only the clicked group for currentArea in Firefox', async () => {
+    await openFreshOptionsPage()
+
+    const result = await runSortFixture(`
+      const { windowId, tabs, tabIds } = await createWindowTabs([
+        'z-top',
+        'c-group',
+        'a-group',
+        'b-top',
+      ])
+      const { groupId } = await groupTabs([tabs[1], tabs[2]])
+
+      await run(windowId, 'url', false, false, 'currentArea', tabs[1].id)
+      const ordered = await waitForOrder(windowId, tabIds, [
+        'z-top',
+        'a-group',
+        'c-group',
+        'b-top',
+      ])
+
+      return { groupId, ordered }
+    `)
+
+    assert.equal(result.ordered[1].groupId, result.groupId)
+    assert.equal(result.ordered[2].groupId, result.groupId)
+    assert.notEqual(result.ordered[0].groupId, result.groupId)
+    assert.notEqual(result.ordered[3].groupId, result.groupId)
+  })
+
+  test('run sorts top-level units without changing group internals in Firefox',
+    async () => {
+      await openFreshOptionsPage()
+
+      const result = await runSortFixture(`
+        const { windowId, tabs, tabIds } = await createWindowTabs([
+          'c-top',
+          'b-group',
+          'a-group',
+          'aa-top',
+        ])
+        const { groupId } = await groupTabs([tabs[1], tabs[2]])
+
+        await run(windowId, 'url', false, false, 'currentArea', tabs[0].id)
+        const ordered = await waitForOrder(windowId, tabIds, [
+          'aa-top',
+          'b-group',
+          'a-group',
+          'c-top',
+        ])
+
+        return { groupId, ordered }
+      `)
+
+      assert.equal(result.ordered[1].groupId, result.groupId)
+      assert.equal(result.ordered[2].groupId, result.groupId)
+      assert.notEqual(result.ordered[0].groupId, result.groupId)
+      assert.notEqual(result.ordered[3].groupId, result.groupId)
+    })
+
+  test('run sorts all groups and top-level units for allGroups in Firefox',
+    async () => {
+      await openFreshOptionsPage()
+
+      const result = await runSortFixture(`
+        const { windowId, tabs, tabIds } = await createWindowTabs([
+          'z-top',
+          'c-g1',
+          'b-g1',
+          'd-top',
+          'e-g2',
+          'a-g2',
+        ])
+        const firstGroup = await groupTabs([tabs[1], tabs[2]])
+        const secondGroup = await groupTabs([tabs[4], tabs[5]])
+
+        await run(windowId, 'url', false, false, 'allGroups', tabs[0].id)
+        const ordered = await waitForOrder(windowId, tabIds, [
+          'a-g2',
+          'e-g2',
+          'b-g1',
+          'c-g1',
+          'd-top',
+          'z-top',
+        ])
+
+        return {
+          firstGroupId: firstGroup.groupId,
+          secondGroupId: secondGroup.groupId,
+          ordered,
+        }
+      `)
+
+      assert.equal(result.ordered[0].groupId, result.secondGroupId)
+      assert.equal(result.ordered[1].groupId, result.secondGroupId)
+      assert.equal(result.ordered[2].groupId, result.firstGroupId)
+      assert.equal(result.ordered[3].groupId, result.firstGroupId)
+      assert.notEqual(result.ordered[4].groupId, result.firstGroupId)
+      assert.notEqual(result.ordered[4].groupId, result.secondGroupId)
+      assert.notEqual(result.ordered[5].groupId, result.firstGroupId)
+      assert.notEqual(result.ordered[5].groupId, result.secondGroupId)
+    })
 })

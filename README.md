@@ -34,6 +34,7 @@ https://addons.mozilla.org/addon/clicktabsort/
 npm install
 npm run lint
 npm run test
+npm run test:e2e
 npm run build
 ```
 
@@ -41,6 +42,7 @@ npm run build
 `npm run build` は `web-ext-artifacts/clicktabsort-<version>.zip` を作成します。
 
 `npm run run` は、この拡張機能を一時的に読み込んだ Firefox を起動します。
+`npm run test:e2e` は、Geckodriver で Firefox を起動して実ブラウザ上の拡張機能を検証します。
 拡張機能のソースは `extension/` にあります。
 
 ## プライバシー
