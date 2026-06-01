@@ -80,6 +80,39 @@ export function onError (error) {
   console.error(error)
 }
 
+export function getNoGroupId () {
+  return browser.tabGroups?.TAB_GROUP_ID_NONE ?? -1
+}
+
+export function getNoSplitViewId () {
+  return -1
+}
+
+export function isGroupedTab (tab) {
+  return tab?.groupId !== undefined && tab.groupId !== getNoGroupId()
+}
+
+export function isSplitViewTab (tab) {
+  return tab?.splitViewId !== undefined &&
+    tab.splitViewId !== getNoSplitViewId()
+}
+
+export function getSortedTabsInSegment (tabList, sortPinned) {
+  const sortedTabs = [...tabList].sort((tab1, tab2) => tab1.index - tab2.index)
+
+  let firstUnpinnedIndex = 0
+  for (; firstUnpinnedIndex < sortedTabs.length; firstUnpinnedIndex++) {
+    if (!sortedTabs[firstUnpinnedIndex].pinned) {
+      break
+    }
+  }
+
+  if (sortPinned) {
+    return sortedTabs.slice(0, firstUnpinnedIndex)
+  }
+  return sortedTabs.slice(firstUnpinnedIndex)
+}
+
 export async function getValue (key, defaultValue) {
   const {
     [key]: value = defaultValue,
@@ -119,6 +152,7 @@ export function normalizeMenuItems (menuItems) {
     return cloneMenuItems(DEFAULT_MENU_ITEMS)
   }
 
+  // Legacy settings from versions before per-item scopes were introduced.
   if (Array.isArray(menuItems)) {
     const normalized = {}
     for (const key of ALL_MENU_ITEMS) {

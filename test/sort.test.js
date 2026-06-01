@@ -11,6 +11,7 @@ const state = {
   notificationError: undefined,
   forceGroupOnTabMove: undefined,
   ungrouped: [],
+  queryCount: 0,
 }
 
 function cloneTab (tab) {
@@ -26,6 +27,7 @@ function resetTabs (tabs) {
   state.notificationError = undefined
   state.forceGroupOnTabMove = undefined
   state.ungrouped = []
+  state.queryCount = 0
 }
 
 function getWindowTabs (windowId) {
@@ -139,6 +141,7 @@ globalThis.browser = {
   tabs: {
     SPLIT_VIEW_ID_NONE: -1,
     query: async (query) => {
+      state.queryCount++
       let result = state.tabs
       if (query.windowId !== undefined) {
         result = result.filter((tab) => tab.windowId === query.windowId)
@@ -322,6 +325,7 @@ test('クリック先の範囲ではグループ内タブから実行した場�
 
   assert.deepEqual(getTabIds(), [1, 3, 2, 4])
   assert.deepEqual(state.groupMoved, [])
+  assert.equal(state.queryCount, 1)
 })
 
 test('クリック先の範囲ではトップレベルから実行した場合にグループをブロックとしてトップレベルをソートする', async () => {
@@ -351,6 +355,7 @@ test('トップレベルと全グループでは各グループ内とトップ�
   await run(1, 'url', false, false, 'allGroups', 1)
 
   assert.deepEqual(getTabIds(), [6, 5, 3, 2, 4, 1])
+  assert.equal(state.queryCount, 3)
 })
 
 test('分割ビューは内部順を保ったブロックとしてグループ内でソートする', async () => {
@@ -424,6 +429,7 @@ test('トップレベル分割ビューがグループへ吸着しても所属�
   assert.deepEqual(getTabIds(), [4, 5, 2, 3, 1])
   assert.deepEqual(getMemberships(), memberships)
   assert.deepEqual(state.ungrouped, [4, 5])
+  assert.equal(state.queryCount, 2)
 })
 
 test('トップレベルソート中にタブがグループへ吸着した場合はトップレベルへ戻す', async () => {

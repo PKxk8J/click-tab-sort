@@ -10,7 +10,9 @@ import {
   KEY_SORT_BY,
   KEY_TOP_LEVEL_ONLY,
   debug,
+  getSortedTabsInSegment,
   getValue,
+  isGroupedTab,
   normalizeContexts,
   normalizeMenuItems,
   normalizeNotification,
@@ -30,14 +32,6 @@ const {
 
 let rebuildMenuPromise
 let rebuildMenuRequested = false
-
-function getNoGroupId () {
-  return browser.tabGroups?.TAB_GROUP_ID_NONE ?? -1
-}
-
-function isGroupedTab (tab) {
-  return tab.groupId !== undefined && tab.groupId !== getNoGroupId()
-}
 
 function getSingleMenuId (key) {
   return 'single:' + key
@@ -213,21 +207,6 @@ async function getCurrentTab () {
   return tab
 }
 
-function getTargetSegment (tabList, targetTab) {
-  const sortedTabs = [...tabList].sort((tab1, tab2) => tab1.index - tab2.index)
-  let firstUnpinnedIndex = 0
-  for (; firstUnpinnedIndex < sortedTabs.length; firstUnpinnedIndex++) {
-    if (!sortedTabs[firstUnpinnedIndex].pinned) {
-      break
-    }
-  }
-
-  if (targetTab?.pinned) {
-    return sortedTabs.slice(0, firstUnpinnedIndex)
-  }
-  return sortedTabs.slice(firstUnpinnedIndex)
-}
-
 async function getContextState (tab) {
   const targetTab = tab || await getCurrentTab()
   if (!targetTab) {
@@ -240,7 +219,7 @@ async function getContextState (tab) {
   ])
   const menuItems = normalizeMenuItems(storedMenuItems)
   const entries = getMenuEntries(menuItems)
-  const segment = getTargetSegment(tabList, targetTab)
+  const segment = getSortedTabsInSegment(tabList, targetTab.pinned)
   const hasGroups = segment.some(isGroupedTab)
 
   return { targetTab, menuItems, entries, hasGroups }
