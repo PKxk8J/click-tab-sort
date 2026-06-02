@@ -10,7 +10,7 @@
     "message": "タブ右クリックメニューからタブをソートします。"
   },
   "sort": {
-    "message": "タブをソート"
+    "message": "タブ並べ替え"
   },
   "sortBy": {
     "message": "$1でタブをソート"
@@ -46,10 +46,10 @@
     "message": "今の逆順"
   },
   "currentArea": {
-    "message": "クリック先の範囲"
+    "message": "クリックした階層内で並べ替え"
   },
   "allGroups": {
-    "message": "トップレベルと全グループ"
+    "message": "全ての階層に対して階層ごとに並べ替え"
   },
   "currentGroupOnly": {
     "message": "このグループだけ"
@@ -57,11 +57,32 @@
   "topLevelOnly": {
     "message": "トップレベルだけ"
   },
+  "topLevelScope": {
+    "message": "トップレベル"
+  },
+  "groupScope": {
+    "message": "グループ内"
+  },
+  "pinnedScope": {
+    "message": "ピン留めされたタブ内"
+  },
+  "allGroupsMenu": {
+    "message": "トップレベルおよびグループごと"
+  },
   "notification": {
     "message": "通知"
   },
   "menuItems": {
-    "message": "メニュー項目"
+    "message": "並べ替え方法"
+  },
+  "hierarchyDescription": {
+    "message": "階層の種類: トップレベル / グループ / ピン留めされたタブ"
+  },
+  "behavior": {
+    "message": "動作"
+  },
+  "useGroupNameAsGroupTitle": {
+    "message": "グループのタイトルとしてグループ名を使う"
   },
   "settings": {
     "message": "設定"

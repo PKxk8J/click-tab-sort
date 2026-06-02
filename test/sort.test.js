@@ -4,6 +4,7 @@ import test, { mock } from 'node:test'
 const state = {
   currentWindowId: 1,
   tabs: [],
+  groups: [],
   moved: [],
   groupMoved: [],
   notifications: [],
@@ -20,6 +21,7 @@ function cloneTab (tab) {
 
 function resetTabs (tabs) {
   state.tabs = tabs.map(cloneTab)
+  state.groups = []
   state.moved = []
   state.groupMoved = []
   state.notifications = []
@@ -133,6 +135,13 @@ globalThis.browser = {
   },
   tabGroups: {
     TAB_GROUP_ID_NONE: -1,
+    query: async (query) => {
+      let result = state.groups
+      if (query.windowId !== undefined) {
+        result = result.filter((group) => group.windowId === query.windowId)
+      }
+      return result.map((group) => ({ ...group }))
+    },
     move: async (groupId, properties) => {
       moveGroup(groupId, properties.index)
       return { id: groupId }
@@ -180,6 +189,7 @@ const {
   normalizeContexts,
   normalizeMenuItems,
   normalizeNotification,
+  normalizeUseGroupNameAsGroupTitle,
 } = await import('../extension/common.js')
 
 test('対応しているメニューコンテキストだけを残してコンテキストを正規化する', () => {
@@ -209,6 +219,12 @@ test('通知設定を真偽値に正規化する', () => {
   assert.equal(normalizeNotification(undefined), false)
   assert.equal(normalizeNotification(true), true)
   assert.equal(normalizeNotification('true'), false)
+})
+
+test('グループ名をタイトルとして使う設定を真偽値に正規化する', () => {
+  assert.equal(normalizeUseGroupNameAsGroupTitle(undefined), false)
+  assert.equal(normalizeUseGroupNameAsGroupTitle(true), true)
+  assert.equal(normalizeUseGroupNameAsGroupTitle('true'), false)
 })
 
 test('固定タブ以外から実行した場合は固定タブを残して通常タブだけをソートする', async () => {
@@ -342,6 +358,49 @@ test('クリック先の範囲ではトップレベルから実行した場合�
   assert.deepEqual(state.groupMoved, [{ groupId: 10, index: 1 }])
 })
 
+test('設定OFFではグループ内の先頭タブをグループのタイトル代表値として使う', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 40 },
+    { id: 2, windowId: 1, index: 1, pinned: false, groupId: 10, url: 'https://z.example/', title: 'Z', lastAccessed: 30 },
+    { id: 3, windowId: 1, index: 2, pinned: false, groupId: 10, url: 'https://y.example/', title: 'Y', lastAccessed: 20 },
+    { id: 4, windowId: 1, index: 3, pinned: false, url: 'https://c.example/', title: 'C', lastAccessed: 10 },
+  ])
+  state.groups = [{ id: 10, windowId: 1, title: '' }]
+
+  await run(1, 'title', false, false, 'currentArea', 1, false)
+
+  assert.deepEqual(getTabIds(), [1, 4, 2, 3])
+})
+
+test('設定ONでは無名グループを空文字列のタイトルとしてトップレベルでソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 40 },
+    { id: 2, windowId: 1, index: 1, pinned: false, groupId: 10, url: 'https://z.example/', title: 'Z', lastAccessed: 30 },
+    { id: 3, windowId: 1, index: 2, pinned: false, groupId: 10, url: 'https://y.example/', title: 'Y', lastAccessed: 20 },
+    { id: 4, windowId: 1, index: 3, pinned: false, url: 'https://c.example/', title: 'C', lastAccessed: 10 },
+  ])
+  state.groups = [{ id: 10, windowId: 1, title: '' }]
+
+  await run(1, 'title', false, false, 'currentArea', 1, true)
+
+  assert.deepEqual(getTabIds(), [2, 3, 1, 4])
+})
+
+test('トップレベル指定ではグループ内タブから実行してもトップレベルだけをソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: true, url: 'https://z.example/', title: 'Z', lastAccessed: 60 },
+    { id: 2, windowId: 1, index: 1, pinned: true, url: 'https://a.example/', title: 'A', lastAccessed: 50 },
+    { id: 3, windowId: 1, index: 2, pinned: false, groupId: 10, url: 'https://d.example/', title: 'D', lastAccessed: 40 },
+    { id: 4, windowId: 1, index: 3, pinned: false, groupId: 10, url: 'https://a.example/', title: 'A', lastAccessed: 30 },
+    { id: 5, windowId: 1, index: 4, pinned: false, url: 'https://c.example/', title: 'C', lastAccessed: 20 },
+    { id: 6, windowId: 1, index: 5, pinned: false, url: 'https://b.example/', title: 'B', lastAccessed: 10 },
+  ])
+
+  await run(1, 'url', false, false, 'topLevelOnly', 3)
+
+  assert.deepEqual(getTabIds(), [1, 2, 6, 5, 3, 4])
+})
+
 test('トップレベルと全グループでは各グループ内とトップレベルをどちらもソートする', async () => {
   resetTabsWithDefaults([
     { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://z.example/', title: 'Z', lastAccessed: 60 },
@@ -356,6 +415,21 @@ test('トップレベルと全グループでは各グループ内とトップ�
 
   assert.deepEqual(getTabIds(), [6, 5, 3, 2, 4, 1])
   assert.equal(state.queryCount, 3)
+})
+
+test('トップレベルと全グループではピン留めされたタブ内もソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: true, url: 'https://z.example/', title: 'Z', lastAccessed: 60 },
+    { id: 2, windowId: 1, index: 1, pinned: true, url: 'https://a.example/', title: 'A', lastAccessed: 50 },
+    { id: 3, windowId: 1, index: 2, pinned: false, url: 'https://z.example/', title: 'Z', lastAccessed: 40 },
+    { id: 4, windowId: 1, index: 3, pinned: false, groupId: 10, url: 'https://c.example/', title: 'C', lastAccessed: 30 },
+    { id: 5, windowId: 1, index: 4, pinned: false, groupId: 10, url: 'https://b.example/', title: 'B', lastAccessed: 20 },
+    { id: 6, windowId: 1, index: 5, pinned: false, url: 'https://d.example/', title: 'D', lastAccessed: 10 },
+  ])
+
+  await run(1, 'url', false, false, 'allGroups', 3)
+
+  assert.deepEqual(getTabIds(), [2, 1, 5, 4, 6, 3])
 })
 
 test('分割ビューは内部順を保ったブロックとしてグループ内でソートする', async () => {

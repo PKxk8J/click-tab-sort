@@ -46,10 +46,10 @@
     "message": "Reverse Order"
   },
   "currentArea": {
-    "message": "Clicked area"
+    "message": "Sort within clicked hierarchy"
   },
   "allGroups": {
-    "message": "Top level and all groups"
+    "message": "Sort each hierarchy"
   },
   "currentGroupOnly": {
     "message": "This group only"
@@ -57,11 +57,32 @@
   "topLevelOnly": {
     "message": "Top level only"
   },
+  "topLevelScope": {
+    "message": "Top level"
+  },
+  "groupScope": {
+    "message": "Group"
+  },
+  "pinnedScope": {
+    "message": "Pinned tabs"
+  },
+  "allGroupsMenu": {
+    "message": "Top level and groups"
+  },
   "notification": {
     "message": "Notification"
   },
   "menuItems": {
-    "message": "Menu Items"
+    "message": "Sort Methods"
+  },
+  "hierarchyDescription": {
+    "message": "Hierarchy types: top level / groups / pinned tabs"
+  },
+  "behavior": {
+    "message": "Behavior"
+  },
+  "useGroupNameAsGroupTitle": {
+    "message": "Use group name as the group title"
   },
   "settings": {
     "message": "Settings"

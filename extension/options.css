@@ -93,6 +93,12 @@ h2 {
   padding-block-start: 10px;
 }
 
+.section-description {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .toggle-list,
 .menu-list,
 .mode-list {

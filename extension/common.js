@@ -24,11 +24,19 @@ export const KEY_CURRENT_AREA = 'currentArea'
 export const KEY_ALL_GROUPS = 'allGroups'
 export const KEY_CURRENT_GROUP_ONLY = 'currentGroupOnly'
 export const KEY_TOP_LEVEL_ONLY = 'topLevelOnly'
+export const KEY_TOP_LEVEL_SCOPE = 'topLevelScope'
+export const KEY_GROUP_SCOPE = 'groupScope'
+export const KEY_PINNED_SCOPE = 'pinnedScope'
+export const KEY_ALL_GROUPS_MENU = 'allGroupsMenu'
 
 export const KEY_SORT = 'sort'
 export const KEY_SORT_BY = 'sortBy'
 export const KEY_CONTEXTS = 'contexts'
 export const KEY_MENU_ITEMS = 'menuItems'
+export const KEY_HIERARCHY_DESCRIPTION = 'hierarchyDescription'
+export const KEY_BEHAVIOR = 'behavior'
+export const KEY_USE_GROUP_NAME_AS_GROUP_TITLE =
+  'useGroupNameAsGroupTitle'
 export const KEY_NOTIFICATION = 'notification'
 export const KEY_FEEDBACK = 'feedback'
 export const KEY_SETTINGS = 'settings'
@@ -60,6 +68,7 @@ export const DEFAULT_MENU_ITEMS = {
   [KEY_TITLE]: [KEY_CURRENT_AREA],
 }
 export const DEFAULT_NOTIFICATION = false
+export const DEFAULT_USE_GROUP_NAME_AS_GROUP_TITLE = false
 
 export const NOTIFICATION_PERMISSION = {
   permissions: ['notifications'],
@@ -189,4 +198,12 @@ export function normalizeNotification (notification) {
   }
 
   return notification === true
+}
+
+export function normalizeUseGroupNameAsGroupTitle (useGroupName) {
+  if (useGroupName === undefined) {
+    return DEFAULT_USE_GROUP_NAME_AS_GROUP_TITLE
+  }
+
+  return useGroupName === true
 }

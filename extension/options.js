@@ -2,8 +2,10 @@ import {
   ALL_CONTEXTS,
   ALL_MENU_ITEMS,
   ALL_MENU_SCOPES,
+  KEY_BEHAVIOR,
   KEY_CONTEXTS,
   KEY_FEEDBACK,
+  KEY_HIERARCHY_DESCRIPTION,
   KEY_MENU_ITEMS,
   KEY_NAME,
   KEY_NOTIFICATION,
@@ -11,11 +13,13 @@ import {
   KEY_SAVE_STATUS_SAVED,
   KEY_SAVE_STATUS_SAVING,
   KEY_SETTINGS,
+  KEY_USE_GROUP_NAME_AS_GROUP_TITLE,
   NOTIFICATION_PERMISSION,
   debug,
   normalizeContexts,
   normalizeMenuItems,
   normalizeNotification,
+  normalizeUseGroupNameAsGroupTitle,
   onError,
   storageArea,
 } from './common.js'
@@ -64,6 +68,9 @@ async function restore () {
   const contexts = normalizeContexts(data[KEY_CONTEXTS])
   const menuItems = normalizeMenuItems(data[KEY_MENU_ITEMS])
   const notification = normalizeNotification(data[KEY_NOTIFICATION])
+  const useGroupNameAsGroupTitle = normalizeUseGroupNameAsGroupTitle(
+    data[KEY_USE_GROUP_NAME_AS_GROUP_TITLE],
+  )
   const notificationAllowed = notification &&
     await permissions.contains(NOTIFICATION_PERMISSION)
 
@@ -80,6 +87,8 @@ async function restore () {
     })
   })
 
+  document.getElementById(KEY_USE_GROUP_NAME_AS_GROUP_TITLE).checked =
+    useGroupNameAsGroupTitle
   document.getElementById(KEY_NOTIFICATION).checked = notificationAllowed
 }
 
@@ -115,6 +124,9 @@ async function save () {
   })
 
   const notificationInput = document.getElementById(KEY_NOTIFICATION)
+  const useGroupNameAsGroupTitle = document.getElementById(
+    KEY_USE_GROUP_NAME_AS_GROUP_TITLE,
+  ).checked
   let notification = notificationInput.checked
   if (notification && !await permissions.contains(NOTIFICATION_PERMISSION)) {
     notification = false
@@ -124,6 +136,7 @@ async function save () {
   const data = {
     [KEY_CONTEXTS]: contexts,
     [KEY_MENU_ITEMS]: menuItems,
+    [KEY_USE_GROUP_NAME_AS_GROUP_TITLE]: useGroupNameAsGroupTitle,
     [KEY_NOTIFICATION]: notification,
   }
   await storageArea.set(data)
@@ -246,6 +259,9 @@ async function init () {
   const itemContainer = document.getElementById(KEY_MENU_ITEMS)
   ALL_MENU_ITEMS.forEach((key) => addMenuItemEntry(key, itemContainer))
 
+  const behaviorContainer = document.getElementById(KEY_BEHAVIOR)
+  addCheckboxEntry(KEY_USE_GROUP_NAME_AS_GROUP_TITLE, behaviorContainer)
+
   const notificationContainer = document.getElementById('notificationSetting')
   addCheckboxEntry(KEY_NOTIFICATION, notificationContainer)
 
@@ -253,6 +269,9 @@ async function init () {
   setLabelText('label_' + KEY_SETTINGS, KEY_SETTINGS)
   setLabelText('label_' + KEY_CONTEXTS, KEY_CONTEXTS)
   setLabelText('label_' + KEY_MENU_ITEMS, KEY_MENU_ITEMS)
+  setLabelText('label_' + KEY_HIERARCHY_DESCRIPTION,
+    KEY_HIERARCHY_DESCRIPTION)
+  setLabelText('label_' + KEY_BEHAVIOR, KEY_BEHAVIOR)
   setLabelText('label_' + KEY_FEEDBACK, KEY_FEEDBACK)
 
   await restore()

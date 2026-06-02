@@ -14,6 +14,7 @@ import {
   KEY_SUCCESS_MESSAGE,
   KEY_TITLE,
   KEY_TITLE_REV,
+  KEY_TOP_LEVEL_ONLY,
   KEY_URL,
   KEY_URL_REV,
   NOTIFICATION_ID,
@@ -66,7 +67,14 @@ function createComparator (keyType) {
 
 function getRepresentativeTab (unit) {
   if (unit.type === 'group') {
-    return getRepresentativeTab(unit.units[0])
+    const representativeTab = getRepresentativeTab(unit.units[0])
+    if (unit.useGroupTitle) {
+      return {
+        ...representativeTab,
+        title: unit.groupTitle,
+      }
+    }
+    return representativeTab
   }
   return unit.tabs[0]
 }
@@ -118,7 +126,7 @@ function buildTabUnits (tabList) {
   return units
 }
 
-function makeGroupUnit (tabList, startIndex) {
+function makeGroupUnit (tabList, startIndex, groupTitles) {
   const groupId = tabList[startIndex].groupId
   const groupTabs = []
   let index = startIndex
@@ -137,16 +145,18 @@ function makeGroupUnit (tabList, startIndex) {
       groupId,
       tabs: groupTabs,
       units: buildTabUnits(groupTabs),
+      useGroupTitle: groupTitles.has(groupId),
+      groupTitle: groupTitles.get(groupId) || '',
     },
   }
 }
 
-function buildTopLevelUnits (tabList) {
+function buildTopLevelUnits (tabList, groupTitles = new Map()) {
   const units = []
   for (let i = 0; i < tabList.length;) {
     const tab = tabList[i]
     if (isGroupedTab(tab)) {
-      const { unit, nextIndex } = makeGroupUnit(tabList, i)
+      const { unit, nextIndex } = makeGroupUnit(tabList, i, groupTitles)
       units.push(unit)
       i = nextIndex
       continue
@@ -293,10 +303,15 @@ async function rearrangeUnits (curOrder, idealOrder, progress,
   }
 }
 
-async function querySortedTabsInSegment (windowId, sortPinned, progress) {
+async function querySortedTabs (windowId, progress) {
   const tabList = await tabs.query({ windowId })
   progress.all = tabList.length
-  return getSortedTabsInSegment(tabList, sortPinned)
+  return tabList.sort((tab1, tab2) => tab1.index - tab2.index)
+}
+
+async function querySortedTabsInSegment (windowId, sortPinned, progress) {
+  return getSortedTabsInSegment(await querySortedTabs(windowId, progress),
+    sortPinned)
 }
 
 function findTargetTab (tabList, targetTabId) {
@@ -316,14 +331,65 @@ function getGroupIds (tabList) {
   return groupIds
 }
 
-async function sortGroupInSegment (tabList, groupId, comparator, progress) {
-  const groupTabs = tabList.filter((tab) => tab.groupId === groupId)
-  if (groupTabs.length <= 0) {
+function getGroupTitle (group) {
+  if (typeof group?.title === 'string') {
+    return group.title
+  }
+  return ''
+}
+
+async function queryGroupTitleMap (windowId, tabList, useGroupNameAsGroupTitle) {
+  if (!useGroupNameAsGroupTitle) {
+    return new Map()
+  }
+
+  const groupIds = getGroupIds(tabList)
+  const groupIdSet = new Set(groupIds)
+  const groupTitles = new Map(groupIds.map((groupId) => [groupId, '']))
+  if (groupIds.length <= 0) {
+    return groupTitles
+  }
+
+  const tabGroups = browser.tabGroups
+  try {
+    if (typeof tabGroups?.query === 'function') {
+      const groups = await tabGroups.query({ windowId })
+      for (const group of groups) {
+        if (groupIdSet.has(group.id)) {
+          groupTitles.set(group.id, getGroupTitle(group))
+        }
+      }
+      return groupTitles
+    }
+
+    if (typeof tabGroups?.get === 'function') {
+      for (const groupId of groupIds) {
+        const group = await tabGroups.get(groupId)
+        groupTitles.set(groupId, getGroupTitle(group))
+      }
+    }
+  } catch (error) {
+    onError(error)
+  }
+
+  return groupTitles
+}
+
+async function sortTabHierarchyInSegment (tabList, comparator, progress) {
+  if (tabList.length <= 0) {
     return
   }
 
-  const units = buildTabUnits(groupTabs)
+  const units = buildTabUnits(tabList)
   await rearrangeUnits(units, sortUnits(units, comparator), progress)
+}
+
+async function sortGroupInSegment (tabList, groupId, comparator, progress) {
+  await sortTabHierarchyInSegment(
+    tabList.filter((tab) => tab.groupId === groupId),
+    comparator,
+    progress,
+  )
 }
 
 async function sortAllGroupsInSegment (tabList, comparator, progress) {
@@ -332,8 +398,11 @@ async function sortAllGroupsInSegment (tabList, comparator, progress) {
   }
 }
 
-async function sortTopLevelInSegment (windowId, tabList, comparator, progress) {
-  const units = buildTopLevelUnits(tabList)
+async function sortTopLevelInSegment (windowId, tabList, comparator, progress,
+  useGroupNameAsGroupTitle) {
+  const groupTitles = await queryGroupTitleMap(windowId, tabList,
+    useGroupNameAsGroupTitle)
+  const units = buildTopLevelUnits(tabList, groupTitles)
   const topLevelTabIds = new Set(units.
     filter((unit) => unit.type !== 'group').
     flatMap((unit) => unit.tabs.map((tab) => tab.id)))
@@ -346,25 +415,39 @@ async function sortTopLevelInSegment (windowId, tabList, comparator, progress) {
 }
 
 async function sortTabs (windowId, comparator, sortPinned, scope, targetTabId,
-  progress) {
-  const segment = await querySortedTabsInSegment(windowId, sortPinned, progress)
-  const targetTab = findTargetTab(segment, targetTabId)
-
+  progress, useGroupNameAsGroupTitle) {
   if (scope === KEY_CURRENT_AREA) {
+    const segment = await querySortedTabsInSegment(windowId, sortPinned,
+      progress)
+    const targetTab = findTargetTab(segment, targetTabId)
     if (isGroupedTab(targetTab)) {
       await sortGroupInSegment(segment, targetTab.groupId, comparator, progress)
       return
     }
 
-    await sortTopLevelInSegment(windowId, segment, comparator, progress)
+    await sortTopLevelInSegment(windowId, segment, comparator, progress,
+      useGroupNameAsGroupTitle)
+    return
+  }
+
+  if (scope === KEY_TOP_LEVEL_ONLY) {
+    const tabList = await querySortedTabs(windowId, progress)
+    await sortTopLevelInSegment(windowId,
+      getSortedTabsInSegment(tabList, false), comparator, progress,
+      useGroupNameAsGroupTitle)
     return
   }
 
   if (scope === KEY_ALL_GROUPS) {
-    await sortAllGroupsInSegment(segment, comparator, progress)
-    const latestSegment = await querySortedTabsInSegment(windowId, sortPinned,
-      progress)
-    await sortTopLevelInSegment(windowId, latestSegment, comparator, progress)
+    const tabList = await querySortedTabs(windowId, progress)
+    await sortTabHierarchyInSegment(getSortedTabsInSegment(tabList, true),
+      comparator, progress)
+    await sortAllGroupsInSegment(getSortedTabsInSegment(tabList, false),
+      comparator, progress)
+    const latestTabList = await querySortedTabs(windowId, progress)
+    await sortTopLevelInSegment(windowId,
+      getSortedTabsInSegment(latestTabList, false), comparator, progress,
+      useGroupNameAsGroupTitle)
     return
   }
 
@@ -433,7 +516,7 @@ async function tryNotify (progress) {
 }
 
 export async function run (windowId, keyType, sortPinned, notification,
-  scope = KEY_CURRENT_AREA, targetTabId) {
+  scope = KEY_CURRENT_AREA, targetTabId, useGroupNameAsGroupTitle = false) {
   const progress = {
     done: 0,
   }
@@ -450,7 +533,7 @@ export async function run (windowId, keyType, sortPinned, notification,
     }
 
     await sortTabs(windowId, createComparator(keyType), sortPinned, scope,
-      targetTabId, progress)
+      targetTabId, progress, useGroupNameAsGroupTitle)
     debug('Finished')
 
     if (notifyEnabled) {
