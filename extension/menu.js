@@ -37,10 +37,14 @@ let rebuildMenuRequested = false
 let currentContexts = []
 let currentEntries = []
 let currentMenuActions = new Map()
-let renderedMenuItemIds = []
+let currentMenuItemIds = []
 
 function getLeafMenuId (key, scope) {
   return 'scope:' + key + ':' + scope
+}
+
+function getFlatLeafMenuId (key, scope) {
+  return 'flatScope:' + key + ':' + scope
 }
 
 function getKeyMenuId (key) {
@@ -126,6 +130,30 @@ function getEffectiveEntries (entries, targetTab, hasNonTopLevelHierarchy) {
   }))
 }
 
+function addScope (scopes, scope) {
+  if (!scopes.includes(scope)) {
+    scopes.push(scope)
+  }
+}
+
+function getPotentialScopes (scopes) {
+  const potentialScopes = []
+  for (const scope of scopes) {
+    addScope(potentialScopes, scope)
+    if (scope === KEY_CURRENT_AREA) {
+      addScope(potentialScopes, KEY_TOP_LEVEL_ONLY)
+    }
+  }
+  return potentialScopes
+}
+
+function getPotentialEntries (entries) {
+  return entries.map(({ key, scopes }) => ({
+    key,
+    scopes: getPotentialScopes(scopes),
+  }))
+}
+
 function createLeafMenuRenderItem (key, scope, title, parentId) {
   return {
     action: { key, scope },
@@ -138,7 +166,7 @@ function createLeafMenuRenderItem (key, scope, title, parentId) {
 function createKeyLeafMenuRenderItem (key, scope, targetTab) {
   return {
     action: { key, scope },
-    id: getKeyMenuId(key),
+    id: getFlatLeafMenuId(key, scope),
     parentId: KEY_SORT,
     title: getKeyScopeTitle(key, scope, targetTab),
   }
@@ -148,6 +176,9 @@ function createMenuRenderPlan (visibleEntries, targetTab,
   hasNonTopLevelHierarchy) {
   const effectiveEntries = getEffectiveEntries(visibleEntries, targetTab,
     hasNonTopLevelHierarchy)
+  const potentialEntries = getPotentialEntries(visibleEntries)
+  const rootCanBeAction = potentialEntries.length === 1 &&
+    potentialEntries[0].scopes.length === 1
   const actions = new Map()
   const items = []
   const root = {
@@ -159,8 +190,18 @@ function createMenuRenderPlan (visibleEntries, targetTab,
     const [{ key, scopes }] = effectiveEntries
     if (scopes.length === 1) {
       const scope = scopes[0]
-      root.title = getSortKeyScopeTitle(key, scope, targetTab)
-      actions.set(KEY_SORT, { key, scope })
+      if (rootCanBeAction) {
+        root.title = getSortKeyScopeTitle(key, scope, targetTab)
+        actions.set(KEY_SORT, { key, scope })
+        return { actions, items, root }
+      }
+      root.title = getSortKeyTitle(key)
+      items.push(createLeafMenuRenderItem(
+        key,
+        scope,
+        getScopeMenuTitle(scope, targetTab),
+        KEY_SORT,
+      ))
       return { actions, items, root }
     }
 
@@ -214,9 +255,9 @@ function createMenuItem (properties) {
   })
 }
 
-async function createRenderedMenuItem (properties) {
+async function createManagedMenuItem (properties) {
   await createMenuItem(properties)
-  renderedMenuItemIds.push(properties.id)
+  currentMenuItemIds.push(properties.id)
 }
 
 function updateMenuItem (id, properties) {
@@ -231,28 +272,64 @@ function updateMenuItem (id, properties) {
   })
 }
 
-function removeMenuItem (id) {
-  return new Promise((resolve, reject) => {
-    menus.remove(id, () => {
-      if (runtime.lastError) {
-        reject(runtime.lastError)
-      } else {
-        resolve()
-      }
-    })
-  })
-}
-
-async function clearRenderedMenuItems () {
-  const ids = [...renderedMenuItemIds].reverse()
-  renderedMenuItemIds = []
-  for (const id of ids) {
-    await removeMenuItem(id).catch(onError)
-  }
-}
-
 function hasNonTopLevelHierarchy (tabList) {
   return tabList.some((tab) => tab.pinned || isGroupedTab(tab))
+}
+
+async function createStaticMenuItems (entries, contexts) {
+  const potentialEntries = getPotentialEntries(entries)
+  if (potentialEntries.length === 1) {
+    const [{ key, scopes }] = potentialEntries
+    if (scopes.length <= 1) {
+      return
+    }
+
+    for (const scope of scopes) {
+      await createManagedMenuItem({
+        id: getLeafMenuId(key, scope),
+        title: getScopeMenuTitle(scope, {}),
+        contexts,
+        parentId: KEY_SORT,
+        visible: false,
+      })
+    }
+    return
+  }
+
+  for (const { key, scopes } of potentialEntries) {
+    const keyMenuId = getKeyMenuId(key)
+    await createManagedMenuItem({
+      id: keyMenuId,
+      title: i18n.getMessage(key),
+      contexts,
+      parentId: KEY_SORT,
+      visible: false,
+    })
+
+    for (const scope of scopes) {
+      await createManagedMenuItem({
+        id: getFlatLeafMenuId(key, scope),
+        title: getKeyScopeTitle(key, scope, {}),
+        contexts,
+        parentId: KEY_SORT,
+        visible: false,
+      })
+    }
+
+    if (scopes.length <= 1) {
+      continue
+    }
+
+    for (const scope of scopes) {
+      await createManagedMenuItem({
+        id: getLeafMenuId(key, scope),
+        title: getScopeMenuTitle(scope, {}),
+        contexts,
+        parentId: keyMenuId,
+        visible: false,
+      })
+    }
+  }
 }
 
 async function rebuildMenu () {
@@ -267,7 +344,7 @@ async function rebuildMenu () {
   currentContexts = contexts
   currentEntries = entries
   currentMenuActions = new Map()
-  renderedMenuItemIds = []
+  currentMenuItemIds = []
 
   await menus.removeAll()
   debug('Clear menu items')
@@ -281,6 +358,7 @@ async function rebuildMenu () {
     title: i18n.getMessage(KEY_SORT),
     contexts,
   })
+  await createStaticMenuItems(entries, contexts)
 }
 
 function queueRebuildMenu () {
@@ -325,7 +403,9 @@ async function renderCurrentMenuItems (visibleEntries, targetTab,
   const renderPlan = createMenuRenderPlan(visibleEntries, targetTab,
     hasNonTopLevelHierarchy)
 
-  await clearRenderedMenuItems()
+  for (const id of currentMenuItemIds) {
+    await updateMenuItem(id, { visible: false }).catch(onError)
+  }
   currentMenuActions = renderPlan.actions
   await updateMenuItem(KEY_SORT, {
     visible: renderPlan.root.visible,
@@ -333,11 +413,9 @@ async function renderCurrentMenuItems (visibleEntries, targetTab,
   })
 
   for (const item of renderPlan.items) {
-    await createRenderedMenuItem({
-      id: item.id,
+    await updateMenuItem(item.id, {
+      visible: true,
       title: item.title,
-      contexts: currentContexts,
-      parentId: item.parentId,
     })
     if (item.action) {
       currentMenuActions.set(item.id, item.action)

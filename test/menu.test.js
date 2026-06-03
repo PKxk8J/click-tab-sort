@@ -181,10 +181,35 @@ async function showMenu (tabId) {
 function getChildIds (parentId) {
   return [...state.menuItems.entries()].
     filter(([, item]) => item.parentId === parentId).
+    filter(([, item]) => item.visible !== false).
     map(([id]) => id)
 }
 
-test('トップレベル以外の階層がない場合は単一の階層名をルートに統合する', async () => {
+function getAllChildIds (parentId) {
+  return [...state.menuItems.entries()].
+    filter(([, item]) => item.parentId === parentId).
+    map(([id]) => id)
+}
+
+test('表示前に必要な子メニュー候補を作成する', async () => {
+  resetState({
+    menuItems: { url: ['currentArea', 'allGroups'] },
+    tabs: [
+      { id: 1, windowId: 1, index: 0, active: true },
+      { id: 2, windowId: 1, index: 1, groupId: 10 },
+    ],
+  })
+  await rebuildMenu()
+
+  assert.deepEqual(getAllChildIds('sort'), [
+    'scope:url:currentArea',
+    'scope:url:topLevelOnly',
+    'scope:url:allGroups',
+  ])
+  assert.deepEqual(getChildIds('sort'), [])
+})
+
+test('トップレベル以外の階層がない場合は単一の実行候補を表示する', async () => {
   resetState({
     menuItems: { url: ['currentArea', 'allGroups'] },
     tabs: [
@@ -195,8 +220,12 @@ test('トップレベル以外の階層がない場合は単一の階層名を�
   await rebuildMenu()
   await showMenu(1)
 
-  assert.equal(state.menuItems.get('sort').title, 'sort: url: topLevelScope')
-  assert.deepEqual(getChildIds('sort'), [])
+  assert.equal(state.menuItems.get('sort').title, 'sort: url')
+  assert.deepEqual(getChildIds('sort'), ['scope:url:currentArea'])
+  assert.equal(
+    state.menuItems.get('scope:url:currentArea').title,
+    'topLevelScope',
+  )
   assert.equal(state.refreshCount, 1)
 })
 
@@ -335,7 +364,16 @@ test('複数項目で各項目の階層が1つだけの場合は項目名に階�
   await showMenu(1)
 
   assert.equal(state.menuItems.get('sort').title, 'sort')
-  assert.deepEqual(getChildIds('sort'), ['key:url', 'key:title'])
-  assert.equal(state.menuItems.get('key:url').title, 'url: topLevelScope')
-  assert.equal(state.menuItems.get('key:title').title, 'title: topLevelScope')
+  assert.deepEqual(getChildIds('sort'), [
+    'flatScope:url:currentArea',
+    'flatScope:title:currentArea',
+  ])
+  assert.equal(
+    state.menuItems.get('flatScope:url:currentArea').title,
+    'url: topLevelScope',
+  )
+  assert.equal(
+    state.menuItems.get('flatScope:title:currentArea').title,
+    'title: topLevelScope',
+  )
 })
