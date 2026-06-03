@@ -7,13 +7,13 @@
     "message": "ClickTabSort"
   },
   "description": {
-    "message": "タブ右クリックメニューからタブをソートします。"
+    "message": "右クリックメニューからタブを並べ替えます。"
   },
   "sort": {
-    "message": "タブをソート"
+    "message": "タブ並べ替え"
   },
   "sortBy": {
-    "message": "$1でタブをソート"
+    "message": "$1でタブを並べ替え"
   },
   "url": {
     "message": "URL（A-Z）"
@@ -46,10 +46,10 @@
     "message": "今の逆順"
   },
   "currentArea": {
-    "message": "クリック先の範囲"
+    "message": "クリックした階層内で並べ替え"
   },
   "allGroups": {
-    "message": "トップレベルと全グループ"
+    "message": "全ての階層に対して階層ごとに並べ替え"
   },
   "currentGroupOnly": {
     "message": "このグループだけ"
@@ -57,11 +57,35 @@
   "topLevelOnly": {
     "message": "トップレベルだけ"
   },
+  "topLevelScope": {
+    "message": "トップレベル"
+  },
+  "groupScope": {
+    "message": "グループ内"
+  },
+  "pinnedScope": {
+    "message": "ピン留めされたタブ内"
+  },
+  "allGroupsMenu": {
+    "message": "トップレベルおよびグループごと"
+  },
   "notification": {
     "message": "通知"
   },
   "menuItems": {
-    "message": "メニュー項目"
+    "message": "並べ替え方法"
+  },
+  "hierarchyDescription": {
+    "message": "階層の種類: トップレベル / グループ / ピン留めされたタブ。\nトップレベルで並べ替えるとき、グループの並びは基本的にグループ内の先頭タブの情報で決まります。タイトルで並べ替える場合だけ、「グループのタイトルとしてグループ名を使う」の設定によってグループ名を使えます。"
+  },
+  "behavior": {
+    "message": "動作"
+  },
+  "useGroupNameAsGroupTitle": {
+    "message": "グループのタイトルとしてグループ名を使う"
+  },
+  "useGroupNameAsGroupTitleDescription": {
+    "message": "無効の場合、グループ内の先頭タブのタイトルをグループのタイトルとして使って並べ替えます。"
   },
   "settings": {
     "message": "設定"
@@ -79,10 +103,10 @@
     "message": "保存に失敗しました"
   },
   "sorting": {
-    "message": "タブをソート中..."
+    "message": "タブを並べ替え中..."
   },
   "progress": {
-    "message": "タブをソート中... $PROGRESS$%完了: $TIME$秒",
+    "message": "タブを並べ替え中... $PROGRESS$%完了: $TIME$秒",
     "placeholders": {
       "time": {
         "content": "$1"
@@ -93,7 +117,7 @@
     }
   },
   "successMessage": {
-    "message": "タブをソート完了: $TIME$秒\n$ALL$個中$MOVED$個のタブを移動",
+    "message": "タブを並べ替え完了: $TIME$秒\n$ALL$個中$MOVED$個のタブを移動",
     "placeholders": {
       "time": {
         "content": "$1"
@@ -107,7 +131,7 @@
     }
   },
   "failureMessage": {
-    "message": "タブをソート失敗\n$1"
+    "message": "タブを並べ替え失敗\n$1"
   },
   "contexts": {
     "message": "クリックメニュー"

@@ -46,10 +46,10 @@
     "message": "Reverse Order"
   },
   "currentArea": {
-    "message": "Clicked area"
+    "message": "Sort within clicked hierarchy"
   },
   "allGroups": {
-    "message": "Top level and all groups"
+    "message": "Sort each hierarchy"
   },
   "currentGroupOnly": {
     "message": "This group only"
@@ -57,11 +57,35 @@
   "topLevelOnly": {
     "message": "Top level only"
   },
+  "topLevelScope": {
+    "message": "Top level"
+  },
+  "groupScope": {
+    "message": "Group"
+  },
+  "pinnedScope": {
+    "message": "Pinned tabs"
+  },
+  "allGroupsMenu": {
+    "message": "Top level and groups"
+  },
   "notification": {
     "message": "Notification"
   },
   "menuItems": {
-    "message": "Menu Items"
+    "message": "Sort Methods"
+  },
+  "hierarchyDescription": {
+    "message": "Hierarchy types: top level / groups / pinned tabs.\nWhen sorting at the top level, group order is based on the first tab in each group by default. Only title sorting can use the group name instead, depending on the behavior setting."
+  },
+  "behavior": {
+    "message": "Behavior"
+  },
+  "useGroupNameAsGroupTitle": {
+    "message": "Use group name as the group title"
+  },
+  "useGroupNameAsGroupTitleDescription": {
+    "message": "When disabled, the first tab title in the group is used as the group title for sorting."
   },
   "settings": {
     "message": "Settings"

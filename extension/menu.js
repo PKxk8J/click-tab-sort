@@ -1,19 +1,23 @@
 import {
   ALL_MENU_ITEMS,
-  KEY_ALL_GROUPS,
+  KEY_ALL_GROUPS_MENU,
   KEY_CONTEXTS,
   KEY_CURRENT_AREA,
-  KEY_CURRENT_GROUP_ONLY,
+  KEY_GROUP_SCOPE,
   KEY_MENU_ITEMS,
   KEY_NOTIFICATION,
+  KEY_PINNED_SCOPE,
   KEY_SORT,
-  KEY_SORT_BY,
   KEY_TOP_LEVEL_ONLY,
+  KEY_TOP_LEVEL_SCOPE,
+  KEY_USE_GROUP_NAME_AS_GROUP_TITLE,
   debug,
   getValue,
+  isGroupedTab,
   normalizeContexts,
   normalizeMenuItems,
   normalizeNotification,
+  normalizeUseGroupNameAsGroupTitle,
   onError,
 } from './common.js'
 import {
@@ -30,52 +34,66 @@ const {
 
 let rebuildMenuPromise
 let rebuildMenuRequested = false
+let currentContexts = []
+let currentEntries = []
+let currentMenuActions = new Map()
+let currentMenuItemIds = []
 
-function getNoGroupId () {
-  return browser.tabGroups?.TAB_GROUP_ID_NONE ?? -1
+function getLeafMenuId (key, scope) {
+  return 'scope:' + key + ':' + scope
 }
 
-function isGroupedTab (tab) {
-  return tab.groupId !== undefined && tab.groupId !== getNoGroupId()
-}
-
-function getSingleMenuId (key) {
-  return 'single:' + key
+function getFlatLeafMenuId (key, scope) {
+  return 'flatScope:' + key + ':' + scope
 }
 
 function getKeyMenuId (key) {
   return 'key:' + key
 }
 
-function getScopeMenuId (key, scope) {
-  return 'scope:' + key + ':' + scope
+function joinMenuTitle (...titles) {
+  return titles.filter(Boolean).join(': ')
 }
 
-function parseSingleMenuId (id) {
-  const parts = id.split(':')
-  if (parts.length !== 2 || parts[0] !== 'single') {
-    return
+function getCurrentHierarchyMenuTitle (targetTab) {
+  if (targetTab.pinned) {
+    return i18n.getMessage(KEY_PINNED_SCOPE)
   }
 
-  const [, key] = parts
-  if (!ALL_MENU_ITEMS.includes(key)) {
-    return
+  if (isGroupedTab(targetTab)) {
+    return i18n.getMessage(KEY_GROUP_SCOPE)
   }
-  return { key }
+
+  return i18n.getMessage(KEY_TOP_LEVEL_SCOPE)
 }
 
-function parseScopeMenuId (id) {
-  const parts = id.split(':')
-  if (parts.length !== 3 || parts[0] !== 'scope') {
-    return
+function getScopeMenuTitle (scope, targetTab) {
+  if (scope === KEY_CURRENT_AREA) {
+    return getCurrentHierarchyMenuTitle(targetTab)
   }
 
-  const [, key, scope] = parts
-  if (!ALL_MENU_ITEMS.includes(key) ||
-      ![KEY_CURRENT_AREA, KEY_ALL_GROUPS].includes(scope)) {
-    return
+  if (scope === KEY_TOP_LEVEL_ONLY) {
+    return i18n.getMessage(KEY_TOP_LEVEL_SCOPE)
   }
-  return { key, scope }
+
+  return i18n.getMessage(KEY_ALL_GROUPS_MENU)
+}
+
+function getSortKeyTitle (key) {
+  return joinMenuTitle(i18n.getMessage(KEY_SORT), i18n.getMessage(key))
+}
+
+function getSortKeyScopeTitle (key, scope, targetTab) {
+  return joinMenuTitle(
+    i18n.getMessage(KEY_SORT),
+    i18n.getMessage(key),
+    getScopeMenuTitle(scope, targetTab),
+  )
+}
+
+function getKeyScopeTitle (key, scope, targetTab) {
+  return joinMenuTitle(i18n.getMessage(key), getScopeMenuTitle(scope,
+    targetTab))
 }
 
 function getMenuEntries (menuItems) {
@@ -84,24 +102,144 @@ function getMenuEntries (menuItems) {
     map((key) => ({ key, scopes: menuItems[key] }))
 }
 
-function getScopeTitle (scope, targetTab) {
-  if (scope === KEY_ALL_GROUPS) {
-    return i18n.getMessage(KEY_ALL_GROUPS)
+function getActionScopesForConfiguredScope (scope, targetTab) {
+  if (scope !== KEY_CURRENT_AREA) {
+    return [scope]
   }
-  if (isGroupedTab(targetTab)) {
-    return i18n.getMessage(KEY_CURRENT_GROUP_ONLY)
+
+  if (targetTab.pinned || isGroupedTab(targetTab)) {
+    return [KEY_CURRENT_AREA, KEY_TOP_LEVEL_ONLY]
   }
-  return i18n.getMessage(KEY_TOP_LEVEL_ONLY)
+
+  return [KEY_CURRENT_AREA]
 }
 
-function getSingleTitle (key, scope, targetTab, hasGroups, flat) {
-  const title = flat
-    ? i18n.getMessage(KEY_SORT_BY, i18n.getMessage(key))
-    : i18n.getMessage(key)
-  if (!hasGroups || !scope) {
-    return title
+function getEffectiveScopes (scopes, targetTab, hasNonTopLevelHierarchy) {
+  if (!hasNonTopLevelHierarchy) {
+    return scopes.slice(0, 1)
   }
-  return title + ' (' + getScopeTitle(scope, targetTab) + ')'
+
+  return scopes.flatMap((scope) => getActionScopesForConfiguredScope(scope,
+    targetTab))
+}
+
+function getEffectiveEntries (entries, targetTab, hasNonTopLevelHierarchy) {
+  return entries.map(({ key, scopes }) => ({
+    key,
+    scopes: getEffectiveScopes(scopes, targetTab, hasNonTopLevelHierarchy),
+  }))
+}
+
+function addScope (scopes, scope) {
+  if (!scopes.includes(scope)) {
+    scopes.push(scope)
+  }
+}
+
+function getPotentialScopes (scopes) {
+  const potentialScopes = []
+  for (const scope of scopes) {
+    addScope(potentialScopes, scope)
+    if (scope === KEY_CURRENT_AREA) {
+      addScope(potentialScopes, KEY_TOP_LEVEL_ONLY)
+    }
+  }
+  return potentialScopes
+}
+
+function getPotentialEntries (entries) {
+  return entries.map(({ key, scopes }) => ({
+    key,
+    scopes: getPotentialScopes(scopes),
+  }))
+}
+
+function createLeafMenuRenderItem (key, scope, title, parentId) {
+  return {
+    action: { key, scope },
+    id: getLeafMenuId(key, scope),
+    parentId,
+    title,
+  }
+}
+
+function createKeyLeafMenuRenderItem (key, scope, targetTab) {
+  return {
+    action: { key, scope },
+    id: getFlatLeafMenuId(key, scope),
+    parentId: KEY_SORT,
+    title: getKeyScopeTitle(key, scope, targetTab),
+  }
+}
+
+function createMenuRenderPlan (visibleEntries, targetTab,
+  hasNonTopLevelHierarchy) {
+  const effectiveEntries = getEffectiveEntries(visibleEntries, targetTab,
+    hasNonTopLevelHierarchy)
+  const potentialEntries = getPotentialEntries(visibleEntries)
+  const rootCanBeAction = potentialEntries.length === 1 &&
+    potentialEntries[0].scopes.length === 1
+  const actions = new Map()
+  const items = []
+  const root = {
+    title: i18n.getMessage(KEY_SORT),
+    visible: effectiveEntries.length > 0,
+  }
+
+  if (effectiveEntries.length === 1) {
+    const [{ key, scopes }] = effectiveEntries
+    if (scopes.length === 1) {
+      const scope = scopes[0]
+      if (rootCanBeAction) {
+        root.title = getSortKeyScopeTitle(key, scope, targetTab)
+        actions.set(KEY_SORT, { key, scope })
+        return { actions, items, root }
+      }
+      root.title = getSortKeyTitle(key)
+      items.push(createLeafMenuRenderItem(
+        key,
+        scope,
+        getScopeMenuTitle(scope, targetTab),
+        KEY_SORT,
+      ))
+      return { actions, items, root }
+    }
+
+    root.title = getSortKeyTitle(key)
+    for (const scope of scopes) {
+      items.push(createLeafMenuRenderItem(
+        key,
+        scope,
+        getScopeMenuTitle(scope, targetTab),
+        KEY_SORT,
+      ))
+    }
+    return { actions, items, root }
+  }
+
+  for (const { key, scopes } of effectiveEntries) {
+    if (scopes.length === 1) {
+      items.push(createKeyLeafMenuRenderItem(key, scopes[0], targetTab))
+      continue
+    }
+
+    const parentId = getKeyMenuId(key)
+    items.push({
+      id: parentId,
+      parentId: KEY_SORT,
+      title: i18n.getMessage(key),
+    })
+    for (const scope of scopes) {
+      items.push(createLeafMenuRenderItem(
+        key,
+        scope,
+        getScopeMenuTitle(scope, targetTab),
+        parentId,
+      ))
+    }
+  }
+
+  return { actions, items, root }
 }
 
 function createMenuItem (properties) {
@@ -117,6 +255,11 @@ function createMenuItem (properties) {
   })
 }
 
+async function createManagedMenuItem (properties) {
+  await createMenuItem(properties)
+  currentMenuItemIds.push(properties.id)
+}
+
 function updateMenuItem (id, properties) {
   return new Promise((resolve, reject) => {
     menus.update(id, properties, () => {
@@ -129,6 +272,66 @@ function updateMenuItem (id, properties) {
   })
 }
 
+function hasNonTopLevelHierarchy (tabList) {
+  return tabList.some((tab) => tab.pinned || isGroupedTab(tab))
+}
+
+async function createStaticMenuItems (entries, contexts) {
+  const potentialEntries = getPotentialEntries(entries)
+  if (potentialEntries.length === 1) {
+    const [{ key, scopes }] = potentialEntries
+    if (scopes.length <= 1) {
+      return
+    }
+
+    for (const scope of scopes) {
+      await createManagedMenuItem({
+        id: getLeafMenuId(key, scope),
+        title: getScopeMenuTitle(scope, {}),
+        contexts,
+        parentId: KEY_SORT,
+        visible: false,
+      })
+    }
+    return
+  }
+
+  for (const { key, scopes } of potentialEntries) {
+    const keyMenuId = getKeyMenuId(key)
+    await createManagedMenuItem({
+      id: keyMenuId,
+      title: i18n.getMessage(key),
+      contexts,
+      parentId: KEY_SORT,
+      visible: false,
+    })
+
+    for (const scope of scopes) {
+      await createManagedMenuItem({
+        id: getFlatLeafMenuId(key, scope),
+        title: getKeyScopeTitle(key, scope, {}),
+        contexts,
+        parentId: KEY_SORT,
+        visible: false,
+      })
+    }
+
+    if (scopes.length <= 1) {
+      continue
+    }
+
+    for (const scope of scopes) {
+      await createManagedMenuItem({
+        id: getLeafMenuId(key, scope),
+        title: getScopeMenuTitle(scope, {}),
+        contexts,
+        parentId: keyMenuId,
+        visible: false,
+      })
+    }
+  }
+}
+
 async function rebuildMenu () {
   const [storedContexts, storedMenuItems] = await Promise.all([
     getValue(KEY_CONTEXTS),
@@ -138,6 +341,11 @@ async function rebuildMenu () {
   const menuItems = normalizeMenuItems(storedMenuItems)
   const entries = getMenuEntries(menuItems)
 
+  currentContexts = contexts
+  currentEntries = entries
+  currentMenuActions = new Map()
+  currentMenuItemIds = []
+
   await menus.removeAll()
   debug('Clear menu items')
 
@@ -145,49 +353,12 @@ async function rebuildMenu () {
     return
   }
 
-  const nested = entries.length > 1
-  if (nested) {
-    await createMenuItem({
-      id: KEY_SORT,
-      title: i18n.getMessage(KEY_SORT),
-      contexts,
-    })
-  }
-
-  for (const { key, scopes } of entries) {
-    const flat = !nested
-    await createMenuItem({
-      id: getSingleMenuId(key),
-      title: flat
-        ? i18n.getMessage(KEY_SORT_BY, i18n.getMessage(key))
-        : i18n.getMessage(key),
-      contexts,
-      parentId: nested ? KEY_SORT : undefined,
-    })
-
-    if (scopes.length <= 1) {
-      continue
-    }
-
-    await createMenuItem({
-      id: getKeyMenuId(key),
-      title: flat
-        ? i18n.getMessage(KEY_SORT_BY, i18n.getMessage(key))
-        : i18n.getMessage(key),
-      contexts,
-      parentId: nested ? KEY_SORT : undefined,
-      visible: false,
-    })
-    for (const scope of scopes) {
-      await createMenuItem({
-        id: getScopeMenuId(key, scope),
-        title: i18n.getMessage(scope),
-        contexts,
-        parentId: getKeyMenuId(key),
-        visible: false,
-      })
-    }
-  }
+  await createMenuItem({
+    id: KEY_SORT,
+    title: i18n.getMessage(KEY_SORT),
+    contexts,
+  })
+  await createStaticMenuItems(entries, contexts)
 }
 
 function queueRebuildMenu () {
@@ -213,113 +384,83 @@ async function getCurrentTab () {
   return tab
 }
 
-function getTargetSegment (tabList, targetTab) {
-  const sortedTabs = [...tabList].sort((tab1, tab2) => tab1.index - tab2.index)
-  let firstUnpinnedIndex = 0
-  for (; firstUnpinnedIndex < sortedTabs.length; firstUnpinnedIndex++) {
-    if (!sortedTabs[firstUnpinnedIndex].pinned) {
-      break
-    }
-  }
-
-  if (targetTab?.pinned) {
-    return sortedTabs.slice(0, firstUnpinnedIndex)
-  }
-  return sortedTabs.slice(firstUnpinnedIndex)
-}
-
 async function getContextState (tab) {
   const targetTab = tab || await getCurrentTab()
   if (!targetTab) {
     return {}
   }
 
-  const [storedMenuItems, tabList] = await Promise.all([
-    getValue(KEY_MENU_ITEMS),
-    tabs.query({ windowId: targetTab.windowId }),
-  ])
-  const menuItems = normalizeMenuItems(storedMenuItems)
-  const entries = getMenuEntries(menuItems)
-  const segment = getTargetSegment(tabList, targetTab)
-  const hasGroups = segment.some(isGroupedTab)
+  const tabList = await tabs.query({ windowId: targetTab.windowId })
 
-  return { targetTab, menuItems, entries, hasGroups }
+  return {
+    targetTab,
+    hasNonTopLevelHierarchy: hasNonTopLevelHierarchy(tabList),
+  }
 }
 
-function resolveSingleScope (scopes, hasGroups) {
-  if (!hasGroups && scopes.includes(KEY_CURRENT_AREA)) {
-    return KEY_CURRENT_AREA
+async function renderCurrentMenuItems (visibleEntries, targetTab,
+  hasNonTopLevelHierarchy) {
+  const renderPlan = createMenuRenderPlan(visibleEntries, targetTab,
+    hasNonTopLevelHierarchy)
+
+  for (const id of currentMenuItemIds) {
+    await updateMenuItem(id, { visible: false }).catch(onError)
   }
-  return scopes[0]
+  currentMenuActions = renderPlan.actions
+  await updateMenuItem(KEY_SORT, {
+    visible: renderPlan.root.visible,
+    title: renderPlan.root.title,
+  })
+
+  for (const item of renderPlan.items) {
+    await updateMenuItem(item.id, {
+      visible: true,
+      title: item.title,
+    })
+    if (item.action) {
+      currentMenuActions.set(item.id, item.action)
+    }
+  }
 }
 
 async function handleMenuShown (info, tab) {
   const {
     targetTab,
-    entries = [],
-    hasGroups = false,
+    hasNonTopLevelHierarchy = false,
   } = await getContextState(tab)
-  if (!targetTab) {
+  if (!targetTab || currentContexts.length <= 0 || currentEntries.length <= 0) {
     return
   }
 
-  const nested = entries.length > 1
-  const updates = []
-  for (const { key, scopes } of entries) {
-    const showScoped = hasGroups && scopes.length > 1
-    const singleScope = resolveSingleScope(scopes, hasGroups)
-    updates.push(updateMenuItem(getSingleMenuId(key), {
-      visible: !showScoped,
-      title: getSingleTitle(key, singleScope, targetTab, hasGroups, !nested),
-    }))
-
-    if (scopes.length <= 1) {
-      continue
-    }
-
-    updates.push(updateMenuItem(getKeyMenuId(key), {
-      visible: showScoped,
-    }))
-    for (const scope of scopes) {
-      updates.push(updateMenuItem(getScopeMenuId(key, scope), {
-        visible: showScoped,
-        title: getScopeTitle(scope, targetTab),
-      }))
-    }
-  }
-
-  await Promise.all(updates)
+  await renderCurrentMenuItems(currentEntries, targetTab,
+    hasNonTopLevelHierarchy)
   await menus.refresh()
 }
 
 async function handleMenuClick (info, tab) {
-  const scopedEntry = parseScopeMenuId(info.menuItemId)
-  const singleEntry = parseSingleMenuId(info.menuItemId)
-  const entry = scopedEntry || singleEntry
+  const entry = currentMenuActions.get(info.menuItemId)
   if (!entry) {
     return
   }
 
   const {
     targetTab,
-    menuItems,
-    hasGroups = false,
   } = await getContextState(tab)
   if (!targetTab) {
     return
   }
 
-  const scopes = menuItems[entry.key] || []
-  const scope = entry.scope || resolveSingleScope(scopes, hasGroups)
-  if (!scope) {
-    return
-  }
-
-  const notification = normalizeNotification(
-    await getValue(KEY_NOTIFICATION),
+  const [storedNotification, storedUseGroupNameAsGroupTitle] =
+    await Promise.all([
+      getValue(KEY_NOTIFICATION),
+      getValue(KEY_USE_GROUP_NAME_AS_GROUP_TITLE),
+    ])
+  const notification = normalizeNotification(storedNotification)
+  const useGroupNameAsGroupTitle = normalizeUseGroupNameAsGroupTitle(
+    storedUseGroupNameAsGroupTitle,
   )
   await run(targetTab.windowId, entry.key, targetTab.pinned,
-    notification, scope, targetTab.id)
+    notification, entry.scope, targetTab.id, useGroupNameAsGroupTitle)
 }
 
 runtime.onInstalled.addListener(() => {

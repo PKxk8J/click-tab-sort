@@ -93,6 +93,13 @@ h2 {
   padding-block-start: 10px;
 }
 
+.section-description {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: pre-line;
+}
+
 .toggle-list,
 .menu-list,
 .mode-list {
@@ -121,6 +128,14 @@ h2 {
   display: block;
   overflow-wrap: anywhere;
   font-weight: 560;
+}
+
+.setting-description {
+  display: block;
+  margin-block-start: 4px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
 }
 
 .menu-item {
