@@ -14,6 +14,7 @@ import {
   KEY_SAVE_STATUS_SAVING,
   KEY_SETTINGS,
   KEY_USE_GROUP_NAME_AS_GROUP_TITLE,
+  KEY_USE_GROUP_NAME_AS_GROUP_TITLE_DESCRIPTION,
   NOTIFICATION_PERMISSION,
   debug,
   normalizeContexts,
@@ -188,7 +189,12 @@ function createSwitch (inputId) {
   return switchWrapper
 }
 
-function createToggleLabel (key, inputId = key, className = 'toggle-row') {
+function createToggleLabel (
+  key,
+  inputId = key,
+  className = 'toggle-row',
+  descriptionKey = '',
+) {
   const title = document.createElement('span')
   title.className = 'setting-title'
   title.textContent = i18n.getMessage(key)
@@ -196,6 +202,12 @@ function createToggleLabel (key, inputId = key, className = 'toggle-row') {
   const copy = document.createElement('span')
   copy.className = 'setting-copy'
   copy.appendChild(title)
+  if (descriptionKey) {
+    const description = document.createElement('span')
+    description.className = 'setting-description'
+    description.textContent = i18n.getMessage(descriptionKey)
+    copy.appendChild(description)
+  }
 
   const label = document.createElement('label')
   label.className = className
@@ -205,8 +217,9 @@ function createToggleLabel (key, inputId = key, className = 'toggle-row') {
   return label
 }
 
-function addCheckboxEntry (key, container, inputId = key) {
-  container.appendChild(createToggleLabel(key, inputId))
+function addCheckboxEntry (key, container, inputId = key, descriptionKey = '') {
+  container.appendChild(createToggleLabel(key, inputId, 'toggle-row',
+    descriptionKey))
 }
 
 function addScopeEntry (scope, container, inputId) {
@@ -260,7 +273,9 @@ async function init () {
   ALL_MENU_ITEMS.forEach((key) => addMenuItemEntry(key, itemContainer))
 
   const behaviorContainer = document.getElementById(KEY_BEHAVIOR)
-  addCheckboxEntry(KEY_USE_GROUP_NAME_AS_GROUP_TITLE, behaviorContainer)
+  addCheckboxEntry(KEY_USE_GROUP_NAME_AS_GROUP_TITLE, behaviorContainer,
+    KEY_USE_GROUP_NAME_AS_GROUP_TITLE,
+    KEY_USE_GROUP_NAME_AS_GROUP_TITLE_DESCRIPTION)
 
   const notificationContainer = document.getElementById('notificationSetting')
   addCheckboxEntry(KEY_NOTIFICATION, notificationContainer)

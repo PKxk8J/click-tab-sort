@@ -76,13 +76,16 @@
     "message": "Sort Methods"
   },
   "hierarchyDescription": {
-    "message": "Hierarchy types: top level / groups / pinned tabs"
+    "message": "Hierarchy types: top level / groups / pinned tabs.\nWhen sorting at the top level, group order is based on the first tab in each group by default. Only title sorting can use the group name instead, depending on the behavior setting."
   },
   "behavior": {
     "message": "Behavior"
   },
   "useGroupNameAsGroupTitle": {
     "message": "Use group name as the group title"
+  },
+  "useGroupNameAsGroupTitleDescription": {
+    "message": "When disabled, the first tab title in the group is used as the group title for sorting."
   },
   "settings": {
     "message": "Settings"

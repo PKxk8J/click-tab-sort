@@ -37,6 +37,8 @@ export const KEY_HIERARCHY_DESCRIPTION = 'hierarchyDescription'
 export const KEY_BEHAVIOR = 'behavior'
 export const KEY_USE_GROUP_NAME_AS_GROUP_TITLE =
   'useGroupNameAsGroupTitle'
+export const KEY_USE_GROUP_NAME_AS_GROUP_TITLE_DESCRIPTION =
+  'useGroupNameAsGroupTitleDescription'
 export const KEY_NOTIFICATION = 'notification'
 export const KEY_FEEDBACK = 'feedback'
 export const KEY_SETTINGS = 'settings'

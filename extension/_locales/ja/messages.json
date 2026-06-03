@@ -76,13 +76,16 @@
     "message": "並べ替え方法"
   },
   "hierarchyDescription": {
-    "message": "階層の種類: トップレベル / グループ / ピン留めされたタブ"
+    "message": "階層の種類: トップレベル / グループ / ピン留めされたタブ。\nトップレベルで並べ替えるとき、グループの並びは基本的にグループ内の先頭タブの情報で決まります。タイトルで並べ替える場合だけ、「グループのタイトルとしてグループ名を使う」の設定によってグループ名を使えます。"
   },
   "behavior": {
     "message": "動作"
   },
   "useGroupNameAsGroupTitle": {
     "message": "グループのタイトルとしてグループ名を使う"
+  },
+  "useGroupNameAsGroupTitleDescription": {
+    "message": "無効の場合、グループ内の先頭タブのタイトルをグループのタイトルとして使って並べ替えます。"
   },
   "settings": {
     "message": "設定"
