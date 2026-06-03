@@ -56,3 +56,9 @@ npm run build
 ## プライバシー
 
 この拡張機能はユーザーデータを収集または送信しません。
+
+## ライセンス
+
+Apache License 2.0 です。詳細は [LICENSE](LICENSE) を参照してください。
+
+Copyright 2026 PKxk8J and contributors.
