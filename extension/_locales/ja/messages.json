@@ -7,13 +7,13 @@
     "message": "ClickTabSort"
   },
   "description": {
-    "message": "タブ右クリックメニューからタブをソートします。"
+    "message": "右クリックメニューからタブを並べ替えます。"
   },
   "sort": {
     "message": "タブ並べ替え"
   },
   "sortBy": {
-    "message": "$1でタブをソート"
+    "message": "$1でタブを並べ替え"
   },
   "url": {
     "message": "URL（A-Z）"
@@ -100,10 +100,10 @@
     "message": "保存に失敗しました"
   },
   "sorting": {
-    "message": "タブをソート中..."
+    "message": "タブを並べ替え中..."
   },
   "progress": {
-    "message": "タブをソート中... $PROGRESS$%完了: $TIME$秒",
+    "message": "タブを並べ替え中... $PROGRESS$%完了: $TIME$秒",
     "placeholders": {
       "time": {
         "content": "$1"
@@ -114,7 +114,7 @@
     }
   },
   "successMessage": {
-    "message": "タブをソート完了: $TIME$秒\n$ALL$個中$MOVED$個のタブを移動",
+    "message": "タブを並べ替え完了: $TIME$秒\n$ALL$個中$MOVED$個のタブを移動",
     "placeholders": {
       "time": {
         "content": "$1"
@@ -128,7 +128,7 @@
     }
   },
   "failureMessage": {
-    "message": "タブをソート失敗\n$1"
+    "message": "タブを並べ替え失敗\n$1"
   },
   "contexts": {
     "message": "クリックメニュー"
