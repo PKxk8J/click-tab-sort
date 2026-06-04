@@ -32,6 +32,8 @@ const {
   tabs,
 } = browser
 
+const KEY_SORT_ACTION = KEY_SORT + ':action'
+
 let rebuildMenuPromise
 let rebuildMenuRequested = false
 let currentContexts = []
@@ -176,9 +178,6 @@ function createMenuRenderPlan (visibleEntries, targetTab,
   hasNonTopLevelHierarchy) {
   const effectiveEntries = getEffectiveEntries(visibleEntries, targetTab,
     hasNonTopLevelHierarchy)
-  const potentialEntries = getPotentialEntries(visibleEntries)
-  const rootCanBeAction = potentialEntries.length === 1 &&
-    potentialEntries[0].scopes.length === 1
   const actions = new Map()
   const items = []
   const root = {
@@ -190,18 +189,8 @@ function createMenuRenderPlan (visibleEntries, targetTab,
     const [{ key, scopes }] = effectiveEntries
     if (scopes.length === 1) {
       const scope = scopes[0]
-      if (rootCanBeAction) {
-        root.title = getSortKeyScopeTitle(key, scope, targetTab)
-        actions.set(KEY_SORT, { key, scope })
-        return { actions, items, root }
-      }
-      root.title = getSortKeyTitle(key)
-      items.push(createLeafMenuRenderItem(
-        key,
-        scope,
-        getScopeMenuTitle(scope, targetTab),
-        KEY_SORT,
-      ))
+      root.title = getSortKeyScopeTitle(key, scope, targetTab)
+      actions.set(KEY_SORT, { key, scope })
       return { actions, items, root }
     }
 
@@ -358,6 +347,12 @@ async function rebuildMenu () {
     title: i18n.getMessage(KEY_SORT),
     contexts,
   })
+  await createMenuItem({
+    id: KEY_SORT_ACTION,
+    title: i18n.getMessage(KEY_SORT),
+    contexts,
+    visible: false,
+  })
   await createStaticMenuItems(entries, contexts)
 }
 
@@ -402,15 +397,36 @@ async function renderCurrentMenuItems (visibleEntries, targetTab,
   hasNonTopLevelHierarchy) {
   const renderPlan = createMenuRenderPlan(visibleEntries, targetTab,
     hasNonTopLevelHierarchy)
+  const rootAction = renderPlan.actions.get(KEY_SORT)
+  const rootIsAction = renderPlan.items.length === 0 && Boolean(rootAction)
 
   for (const id of currentMenuItemIds) {
     await updateMenuItem(id, { visible: false }).catch(onError)
   }
-  currentMenuActions = renderPlan.actions
-  await updateMenuItem(KEY_SORT, {
-    visible: renderPlan.root.visible,
-    title: renderPlan.root.title,
-  })
+  currentMenuActions = new Map(renderPlan.actions)
+  currentMenuActions.delete(KEY_SORT)
+  if (rootIsAction) {
+    currentMenuActions.set(KEY_SORT_ACTION, rootAction)
+  }
+  if (rootIsAction) {
+    await updateMenuItem(KEY_SORT_ACTION, {
+      visible: renderPlan.root.visible,
+      title: renderPlan.root.title,
+    })
+    await updateMenuItem(KEY_SORT, {
+      visible: false,
+      title: renderPlan.root.title,
+    })
+  } else {
+    await updateMenuItem(KEY_SORT, {
+      visible: renderPlan.root.visible,
+      title: renderPlan.root.title,
+    })
+    await updateMenuItem(KEY_SORT_ACTION, {
+      visible: false,
+      title: renderPlan.root.title,
+    })
+  }
 
   for (const item of renderPlan.items) {
     await updateMenuItem(item.id, {
