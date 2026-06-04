@@ -1,3 +1,9 @@
+## Summary
+
+Sort tabs from the right-click menu.
+
+## Description
+
 ClickTabSort adds tab sorting commands to Firefox right-click menus.
 You can sort tabs from the tab context menu, or enable the same commands on page context menus from the settings page.
 
