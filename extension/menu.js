@@ -374,6 +374,12 @@ function queueRebuildMenu () {
   return rebuildMenuPromise
 }
 
+async function waitForMenuRebuild () {
+  if (rebuildMenuPromise) {
+    await rebuildMenuPromise
+  }
+}
+
 async function getCurrentTab () {
   const [tab] = await tabs.query({ active: true, currentWindow: true })
   return tab
@@ -440,6 +446,7 @@ async function renderCurrentMenuItems (visibleEntries, targetTab,
 }
 
 async function handleMenuShown (info, tab) {
+  await waitForMenuRebuild()
   const {
     targetTab,
     hasNonTopLevelHierarchy = false,
@@ -454,6 +461,7 @@ async function handleMenuShown (info, tab) {
 }
 
 async function handleMenuClick (info, tab) {
+  await waitForMenuRebuild()
   const entry = currentMenuActions.get(info.menuItemId)
   if (!entry) {
     return
@@ -503,3 +511,5 @@ menus.onClicked.addListener((info, tab) => {
 menus.onShown.addListener((info, tab) => {
   return handleMenuShown(info, tab).catch(onError)
 })
+
+queueRebuildMenu().catch(onError)
