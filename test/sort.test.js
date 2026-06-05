@@ -200,8 +200,8 @@ test('対応しているメニューコンテキストだけを残してコン�
 
 test('対応しているメニュー項目だけを残してメニュー項目を正規化する', () => {
   assert.deepEqual(normalizeMenuItems(undefined), {
-    url: ['currentArea'],
-    title: ['currentArea'],
+    url: ['allGroups'],
+    title: ['allGroups'],
   })
   assert.deepEqual(normalizeMenuItems(['title', 'unknown', 'url']), {
     url: ['currentArea'],

@@ -326,10 +326,10 @@ describe('Firefox extension E2E', () => {
 
     assert.equal(await isChecked('tab'), true)
     assert.equal(await isChecked('all'), false)
-    assert.equal(await isChecked('menuItems_url_currentArea'), true)
-    assert.equal(await isChecked('menuItems_url_allGroups'), false)
-    assert.equal(await isChecked('menuItems_title_currentArea'), true)
-    assert.equal(await isChecked('menuItems_title_allGroups'), false)
+    assert.equal(await isChecked('menuItems_url_currentArea'), false)
+    assert.equal(await isChecked('menuItems_url_allGroups'), true)
+    assert.equal(await isChecked('menuItems_title_currentArea'), false)
+    assert.equal(await isChecked('menuItems_title_allGroups'), true)
     assert.equal(await isChecked('menuItems_reverse_currentArea'), false)
     assert.equal(await isChecked('notification'), false)
 
