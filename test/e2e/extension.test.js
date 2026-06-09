@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { after, before, describe, test } from 'node:test'
 import process from 'node:process'
+import { createServer } from 'node:http'
 import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { URL, fileURLToPath } from 'node:url'
 import { Builder, By, until } from 'selenium-webdriver'
 import firefox from 'selenium-webdriver/firefox.js'
 import { download } from 'geckodriver'
@@ -13,6 +14,76 @@ const WAIT_MS = 15_000
 
 let driver
 let extensionBaseUrl
+let fixtureServer
+let fixtureBaseUrl
+
+function escapeHtml (value) {
+  return String(value).
+    replaceAll('&', '&amp;').
+    replaceAll('<', '&lt;').
+    replaceAll('>', '&gt;').
+    replaceAll('"', '&quot;')
+}
+
+async function createFixtureServer () {
+  const server = createServer((request, response) => {
+    const url = new URL(request.url, 'http://127.0.0.1')
+    if (url.pathname !== '/title') {
+      response.writeHead(404).end()
+      return
+    }
+
+    const title = url.searchParams.get('title') || ''
+    const suffix = url.searchParams.get('suffix') || ''
+    const token = url.searchParams.get('token') || ''
+    response.writeHead(200, {
+      'Cache-Control': 'no-store',
+      'Content-Type': 'text/html; charset=utf-8',
+    })
+    response.end(
+      '<!doctype html><meta charset="utf-8"><title>' +
+      escapeHtml(title) +
+      '</title><body>' +
+      escapeHtml(token + '-' + suffix) +
+      '</body>',
+    )
+  })
+
+  await new Promise((resolve, reject) => {
+    const handleError = (error) => {
+      server.off('listening', handleListening)
+      reject(error)
+    }
+    const handleListening = () => {
+      server.off('error', handleError)
+      resolve()
+    }
+    server.once('error', handleError)
+    server.once('listening', handleListening)
+    server.listen(0, '127.0.0.1')
+  })
+  const address = server.address()
+  return {
+    baseUrl: 'http://127.0.0.1:' + address.port + '/',
+    server,
+  }
+}
+
+async function closeFixtureServer () {
+  if (!fixtureServer) {
+    return
+  }
+  await new Promise((resolve, reject) => {
+    fixtureServer.close((error) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve()
+      }
+    })
+  })
+  fixtureServer = undefined
+}
 
 async function createDriver () {
   const geckoDriverPath = process.env.GECKODRIVER_PATH || await download()
@@ -64,6 +135,7 @@ async function waitForOptionsPage () {
         Boolean(document.getElementById('menuItems_url_currentArea')) &&
         Boolean(document.getElementById('menuItems_url_allGroups')) &&
         Boolean(document.getElementById('menuItems_reverse_currentArea')) &&
+        Boolean(document.getElementById('useGroupNameAsGroupTitle')) &&
         Boolean(document.getElementById('notification'))
     `)
   }, WAIT_MS)
@@ -107,7 +179,7 @@ async function runExtensionScript (script, ...args) {
   return result.value
 }
 
-async function runSortFixture (scenarioScript) {
+async function runSortFixture (scenarioScript, ...args) {
   return await runExtensionScript(`
     const { run } = await import(browser.runtime.getURL('sort.js'))
     const token = 'click-tab-sort-e2e-' + Date.now() + '-' + Math.random()
@@ -124,8 +196,15 @@ async function runSortFixture (scenarioScript) {
       splitViewId: tab.splitViewId,
     })
 
-    async function createWindowTabs (suffixes) {
-      const urls = suffixes.map(makeUrl)
+    const makeTitleUrl = (baseUrl, suffix, title) => {
+      const url = new URL('title', baseUrl)
+      url.searchParams.set('token', token)
+      url.searchParams.set('suffix', suffix)
+      url.searchParams.set('title', title)
+      return url.href
+    }
+
+    async function createWindowTabsFromUrls (urls) {
       const testWindow = await browser.windows.create({
         focused: true,
         url: urls[0],
@@ -168,6 +247,39 @@ async function runSortFixture (scenarioScript) {
         tabIds,
         urls,
       }
+    }
+
+    async function createWindowTabs (suffixes) {
+      return await createWindowTabsFromUrls(suffixes.map(makeUrl))
+    }
+
+    async function waitForTitles (tabIds, titles) {
+      const titledTabs = await waitUntil(async () => {
+        const currentTabs = []
+        for (const id of tabIds) {
+          const tab = await browser.tabs.get(id).catch(() => null)
+          if (!tab) {
+            return
+          }
+          currentTabs.push(tab)
+        }
+        return currentTabs.every((tab, index) => tab.title === titles[index]) &&
+          currentTabs
+      }, 10000)
+      if (!titledTabs) {
+        const currentTabs = []
+        for (const id of tabIds) {
+          currentTabs.push(await browser.tabs.get(id).catch(error => ({
+            error: error?.message || String(error),
+            id,
+          })))
+        }
+        throw new Error(
+          'expected tab titles ' + titles.join(', ') +
+          ', got ' + currentTabs.map(tab => tab.title).join(', '),
+        )
+      }
+      return titledTabs
     }
 
     async function updateTabs (tabs, properties) {
@@ -240,8 +352,7 @@ async function runSortFixture (scenarioScript) {
         sort((tab1, tab2) => tab1.index - tab2.index)
     }
 
-    async function waitForOrder (windowId, tabIds, suffixes) {
-      const expectedUrls = suffixes.map(makeUrl)
+    async function waitForUrlOrder (windowId, tabIds, expectedUrls) {
       const orderedTabs = await waitUntil(async () => {
         const tabs = await getOrderedTabs(windowId, tabIds)
         if (tabs.length !== tabIds.length) {
@@ -261,12 +372,16 @@ async function runSortFixture (scenarioScript) {
           })))
         }
         throw new Error(
-          'expected tab order ' + suffixes.join(', ') +
+          'expected tab order ' + expectedUrls.join(', ') +
           ', got ' + actual.map(tab => tab.url).join(', ') +
           ', direct ' + JSON.stringify(direct.map(pickTabState)),
         )
       }
       return orderedTabs.map(pickTabState)
+    }
+
+    async function waitForOrder (windowId, tabIds, suffixes) {
+      return await waitForUrlOrder(windowId, tabIds, suffixes.map(makeUrl))
     }
 
     try {
@@ -276,7 +391,7 @@ async function runSortFixture (scenarioScript) {
         await browser.windows.remove(windowId).catch(() => {})
       }
     }
-  `)
+  `, ...args)
 }
 
 async function getStorageData () {
@@ -309,6 +424,10 @@ async function isChecked (id) {
 
 describe('Firefox extension E2E', () => {
   before(async () => {
+    const fixture = await createFixtureServer()
+    fixtureServer = fixture.server
+    fixtureBaseUrl = fixture.baseUrl
+
     driver = await createDriver()
     const addonId = await driver.installAddon(EXTENSION_DIR, true)
     extensionBaseUrl = await getExtensionBaseUrl(addonId)
@@ -316,8 +435,12 @@ describe('Firefox extension E2E', () => {
   })
 
   after(async () => {
-    if (driver) {
-      await driver.quit()
+    try {
+      if (driver) {
+        await driver.quit()
+      }
+    } finally {
+      await closeFixtureServer()
     }
   })
 
@@ -331,20 +454,24 @@ describe('Firefox extension E2E', () => {
     assert.equal(await isChecked('menuItems_title_currentArea'), false)
     assert.equal(await isChecked('menuItems_title_allGroups'), true)
     assert.equal(await isChecked('menuItems_reverse_currentArea'), false)
+    assert.equal(await isChecked('useGroupNameAsGroupTitle'), false)
     assert.equal(await isChecked('notification'), false)
 
     await setCheckboxValue('all', true)
     await setCheckboxValue('menuItems_url_allGroups', true)
-    await setCheckboxValue('menuItems_title_currentArea', false)
+    await setCheckboxValue('menuItems_title_allGroups', false)
     await setCheckboxValue('menuItems_reverse_currentArea', true)
+    await setCheckboxValue('useGroupNameAsGroupTitle', true)
 
     await waitForStorageData((data) => {
       return data.contexts?.includes('tab') &&
         data.contexts?.includes('all') &&
-        data.menuItems?.url?.includes('currentArea') &&
+        !data.menuItems?.url?.includes('currentArea') &&
         data.menuItems?.url?.includes('allGroups') &&
         !data.menuItems?.title?.includes('currentArea') &&
+        !data.menuItems?.title?.includes('allGroups') &&
         data.menuItems?.reverse?.includes('currentArea') &&
+        data.useGroupNameAsGroupTitle === true &&
         data.notification === false
     }, 'options page settings were not saved')
 
@@ -353,11 +480,12 @@ describe('Firefox extension E2E', () => {
 
     assert.equal(await isChecked('tab'), true)
     assert.equal(await isChecked('all'), true)
-    assert.equal(await isChecked('menuItems_url_currentArea'), true)
+    assert.equal(await isChecked('menuItems_url_currentArea'), false)
     assert.equal(await isChecked('menuItems_url_allGroups'), true)
     assert.equal(await isChecked('menuItems_title_currentArea'), false)
     assert.equal(await isChecked('menuItems_title_allGroups'), false)
     assert.equal(await isChecked('menuItems_reverse_currentArea'), true)
+    assert.equal(await isChecked('useGroupNameAsGroupTitle'), true)
     assert.equal(await isChecked('notification'), false)
   })
 
@@ -372,6 +500,53 @@ describe('Firefox extension E2E', () => {
 
       return {
         expectedUrls: ['a', 'b', 'c'].map(makeUrl),
+        orderedUrls: ordered.map(tab => tab.url),
+      }
+    `)
+
+    assert.deepEqual(result.orderedUrls, result.expectedUrls)
+  })
+
+  test('run sorts tabs by title in Firefox', async () => {
+    await openFreshOptionsPage()
+
+    const result = await runSortFixture(`
+      const specs = [
+        { suffix: 'c', title: 'Charlie' },
+        { suffix: 'a', title: 'Alpha' },
+        { suffix: 'b', title: 'Bravo' },
+      ]
+      const titleBaseUrl = args[0]
+      const urls = specs.map(({ suffix, title }) => {
+        return makeTitleUrl(titleBaseUrl, suffix, title)
+      })
+      const { windowId, tabs, tabIds } = await createWindowTabsFromUrls(urls)
+      await waitForTitles(tabIds, specs.map(({ title }) => title))
+
+      await run(windowId, 'title', false, false, 'currentArea', tabs[0].id)
+      const expectedUrls = [urls[1], urls[2], urls[0]]
+      const ordered = await waitForUrlOrder(windowId, tabIds, expectedUrls)
+
+      return {
+        expectedUrls,
+        orderedUrls: ordered.map(tab => tab.url),
+      }
+    `, fixtureBaseUrl)
+
+    assert.deepEqual(result.orderedUrls, result.expectedUrls)
+  })
+
+  test('run reverses current tab order in Firefox', async () => {
+    await openFreshOptionsPage()
+
+    const result = await runSortFixture(`
+      const { windowId, tabs, tabIds } = await createWindowTabs(['a', 'b', 'c'])
+
+      await run(windowId, 'reverse', false, false, 'currentArea', tabs[0].id)
+      const ordered = await waitForOrder(windowId, tabIds, ['c', 'b', 'a'])
+
+      return {
+        expectedUrls: ['c', 'b', 'a'].map(makeUrl),
         orderedUrls: ordered.map(tab => tab.url),
       }
     `)
