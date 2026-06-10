@@ -1,39 +1,45 @@
 ## Summary
 
-Sort tabs from the right-click menu.
+Easily sort too many Firefox tabs by URL, title, opened time, last access time, random order, or reverse order.
+Tab groups and pinned tabs are supported.
 
 ## Description
 
-ClickTabSort adds tab sorting commands to Firefox right-click menus.
-You can sort tabs from the tab context menu, or enable the same commands on page context menus from the settings page.
+ClickTabSort is a Firefox extension for sorting Firefox tabs from the right-click menu.
+You can sort the tab list directly from the menu.
+You can choose whether to sort only the clicked hierarchy, or to sort every hierarchy separately.
 
-Available sort orders:
+Choose from the following sort methods:
 
 - URL
 - Title
-- Opened date / opened date reverse
-- Accessed date / accessed date reverse
+- Opened date
+- Last accessed date
 - Random
-- Reverse order
+- Reverse current order
 
-You can choose which sort methods appear in the menu.
-Each sort item can be enabled for the clicked hierarchy, or for each hierarchy.
+For each sort method, you can also choose the target scope:
 
-Hierarchy types are top level, tab groups, and pinned tabs.
-When you sort from a tab inside a group, the clicked hierarchy means that group only.
-When you sort from a top-level tab, the clicked hierarchy means top-level tabs only.
-When you sort each hierarchy, pinned tabs are also sorted as their own hierarchy.
-When only one menu path is available, it is folded into a single command, such as "Sort Tabs: URL (A-Z): Top level".
+- The clicked hierarchy
+- Each hierarchy
 
-Pinned tabs are sorted when the clicked hierarchy is pinned tabs, or when each hierarchy is sorted.
-Tab groups are sorted as blocks at the top level, and tabs inside each group can be sorted separately.
-Split view tabs keep their internal order and move as one block.
+Hierarchies are the top level, each tab group, and pinned tabs. They can be sorted separately.
+When sorting the top level, tab groups are treated as single blocks, so tabs inside a group are not mixed with tabs outside the group.
+Pinned tabs stay in the pinned area.
+In every case, split view tabs keep their internal order and are treated as a single block.
 Containers are ignored when sorting.
 
-An optional behavior setting can use tab group names as group titles when sorting groups at the top level.
-Unnamed groups are sorted as an empty title when this setting is enabled.
+If only one sort method or target scope is available, the right-click menu is collapsed so you can run the action in fewer steps.
 
-Optional notifications can show progress and completion.
-The notification permission is requested only when notifications are enabled in settings.
+When a group or split view is treated as a single block, it is usually sorted by the information of its first tab.
+In the settings, you can choose to use the group name as the group title when sorting at the top level.
+When group names are used, unnamed groups are sorted as an empty title.
 
 Opened dates are inferred from Firefox tab IDs and are reset when Firefox starts.
+
+Optional notifications can show progress and completion.
+
+## Privacy
+
+ClickTabSort uses tab access to compare tab URLs, titles, tab groups, pinned state, and last access times.
+It does not collect or send browsing data.
