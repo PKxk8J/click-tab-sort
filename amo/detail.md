@@ -1,9 +1,9 @@
-## Summary
+# Summary
 
-Easily sort too many Firefox tabs by URL, title, opened time, last access time, random order, or reverse order.
+Easily sort too many tabs by URL, title, opened time, last access time, random order, or reverse order.
 Tab groups and pinned tabs are supported.
 
-## Description
+# Description
 
 ClickTabSort is a Firefox extension for sorting Firefox tabs from the right-click menu.
 You can sort the tab list directly from the menu.
