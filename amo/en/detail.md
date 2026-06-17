@@ -43,3 +43,10 @@ Optional notifications can show progress and completion.
 
 ClickTabSort uses tab access to compare tab URLs, titles, tab groups, pinned state, and last access times.
 It does not collect or send browsing data.
+
+# Caption
+
+- screenshot1_menu_item.png: Sort tabs directly from the tab context menu by choosing a method and scope.
+- screenshot2_shallow_menu_item.png: Run the only available sort action from a shortened one-step menu.
+- screenshot3_notification.png: Optional notifications show sorting progress and completion results.
+- screenshot4_settings.png: Choose where the menu appears, which sort methods are shown, and how groups are handled.

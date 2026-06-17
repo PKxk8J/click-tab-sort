@@ -43,3 +43,10 @@ ClickTabSort は、Firefox のタブを右クリックメニューから並べ�
 
 ClickTabSort は、タブの URL、タイトル、タブグループ、ピン留め状態、最後に見た日時を比較するためにタブへのアクセス権限を使用します。
 閲覧データを収集または送信することはありません。
+
+# Caption
+
+- screenshot1_menu_item.png: タブの右クリックメニューから、並べ替え方法と対象範囲を選んで直接実行できます。
+- screenshot2_shallow_menu_item.png: 利用できる並べ替え操作が1つだけのときは、短縮されたメニューから実行できます。
+- screenshot3_notification.png: 通知で、並べ替えの進行状況と完了結果を確認できます。
+- screenshot4_settings.png: メニューを表示する場所、表示する並べ替え方法、グループの扱いを設定できます。
