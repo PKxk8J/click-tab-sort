@@ -1,7 +1,7 @@
 import process from 'node:process'
 import { Buffer } from 'node:buffer'
 import { execFile } from 'node:child_process'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, URLSearchParams } from 'node:url'
@@ -21,6 +21,7 @@ const execFileAsync = promisify(execFile)
 const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const EXTENSION_DIR = resolve(ROOT_DIR, 'extension')
 const AMO_ROOT_DIR = resolve(ROOT_DIR, 'amo')
+const AMO_OUTPUT_DIR = resolve(AMO_ROOT_DIR, 'en')
 const WAIT_MS = Number(process.env.AMO_WAIT_MS || 15_000)
 
 const SCREENSHOT_FILENAMES = {
@@ -37,55 +38,28 @@ const DEFAULT_TARGETS = [
   'notification',
 ]
 
-const LOCALES = {
-  en: {
-    extensionLocale: 'en',
-    firefoxLocale: 'en-US',
-    labels: {
-      sort: 'Sort Tabs',
-      url: 'URL (A-Z)',
-    },
-    tabs: {
-      alpha: 'Alpha Release Notes',
-      beta: 'Beta Backlog',
-      delta: 'Delta Specification',
-      gamma: 'Gamma Research',
-      groupAlpha: 'Grouped Alpha Tab',
-      groupBeta: 'Grouped Beta Tab',
-      shallow: 'Top-level Sort Target',
-    },
-    groups: {
-      work: 'Work',
-    },
+const CAPTURE_TEXT = {
+  firefoxLocale: 'en-US',
+  labels: {
+    sort: 'Sort Tabs',
+    url: 'URL (A-Z)',
   },
-  ja: {
-    extensionLocale: 'ja',
-    firefoxLocale: 'ja',
-    labels: {
-      sort: 'タブ並べ替え',
-      url: 'URL（A-Z）',
-    },
-    tabs: {
-      alpha: 'アルファ リリースノート',
-      beta: 'ベータ バックログ',
-      delta: 'デルタ 仕様書',
-      gamma: 'ガンマ 調査',
-      groupAlpha: 'グループ内アルファタブ',
-      groupBeta: 'グループ内ベータタブ',
-      shallow: 'トップレベルの並べ替え対象',
-    },
-    groups: {
-      work: '作業',
-    },
+  tabs: {
+    alpha: 'Alpha Release Notes',
+    beta: 'Beta Backlog',
+    delta: 'Delta Specification',
+    gamma: 'Gamma Research',
+    groupAlpha: 'Grouped Alpha Tab',
+    groupBeta: 'Grouped Beta Tab',
+    shallow: 'Top-level Sort Target',
+  },
+  groups: {
+    work: 'Work',
   },
 }
 
-const DEFAULT_LOCALES = Object.keys(LOCALES)
-
 let driver
 let extensionBaseUrl
-let activeLocale
-let activeOutputDir
 
 async function runPowerShell (command, env = {}) {
   const encodedCommand = Buffer.from(command, 'utf16le').toString('base64')
@@ -114,7 +88,7 @@ function pageUrl (title, scenario = '') {
 }
 
 function screenshotPath (key) {
-  return resolve(activeOutputDir, SCREENSHOT_FILENAMES[key])
+  return resolve(AMO_OUTPUT_DIR, SCREENSHOT_FILENAMES[key])
 }
 
 function parseCrop (name, fallback) {
@@ -149,7 +123,7 @@ async function createDriver () {
   const geckoDriverPath = process.env.GECKODRIVER_PATH || await download()
   const options = new firefox.Options()
   options.addArguments('-remote-allow-system-access')
-  options.setPreference('intl.locale.requested', activeLocale.firefoxLocale)
+  options.setPreference('intl.locale.requested', CAPTURE_TEXT.firefoxLocale)
   options.setPreference('layout.css.prefers-color-scheme.content-override', 0)
   options.setPreference('ui.systemUsesDarkTheme', 1)
 
@@ -173,7 +147,6 @@ async function installAddon ({ allowPrivateBrowsing = false } = {}) {
   if (stats.isDirectory()) {
     const zip = new Zip()
     await zip.addDir(EXTENSION_DIR)
-    await addForcedDefaultLocale(zip)
     zip.z_.file('screenshot-tab.html', `
       <!doctype html>
       <html>
@@ -215,13 +188,6 @@ async function installAddon ({ allowPrivateBrowsing = false } = {}) {
       setParameter('temporary', true).
       setParameter('allowPrivateBrowsing', allowPrivateBrowsing),
   )
-}
-
-async function addForcedDefaultLocale (zip) {
-  const messagesPath = resolve(EXTENSION_DIR, '_locales',
-    activeLocale.extensionLocale, 'messages.json')
-  const messages = await readFile(messagesPath)
-  zip.z_.file('_locales/en/messages.json', messages)
 }
 
 async function getExtensionBaseUrl (addonId) {
@@ -673,7 +639,7 @@ async function prepareMenuCapture ({ shallow }) {
         },
   })
 
-  await driver.get(pageUrl(activeLocale.tabs.shallow, 'shallow'))
+  await driver.get(pageUrl(CAPTURE_TEXT.tabs.shallow, 'shallow'))
   return await runExtensionScript(`
     const sourceTab = (await browser.tabs.query({
       active: true,
@@ -735,11 +701,11 @@ async function prepareMenuCapture ({ shallow }) {
       sourceTabId: sourceTab.id,
     }
   `, {
-    groupPeerUrl: pageUrl(activeLocale.tabs.groupBeta, 'group-beta'),
-    groupTitle: activeLocale.groups.work,
+    groupPeerUrl: pageUrl(CAPTURE_TEXT.tabs.groupBeta, 'group-beta'),
+    groupTitle: CAPTURE_TEXT.groups.work,
     shallow,
-    topUrl1: pageUrl(activeLocale.tabs.alpha, 'top-alpha'),
-    topUrl2: pageUrl(activeLocale.tabs.beta, 'top-beta'),
+    topUrl1: pageUrl(CAPTURE_TEXT.tabs.alpha, 'top-alpha'),
+    topUrl2: pageUrl(CAPTURE_TEXT.tabs.beta, 'top-beta'),
   })
 }
 
@@ -775,15 +741,15 @@ async function captureMenuScreenshot ({ shallow, path, cropName, fallbackCrop })
     })
     await driver.sleep(500)
     const topMatcher = shallow
-      ? createLabelMatcher({ prefix: activeLocale.labels.sort + ': ' })
-      : createLabelMatcher({ exact: activeLocale.labels.sort })
+      ? createLabelMatcher({ prefix: CAPTURE_TEXT.labels.sort + ': ' })
+      : createLabelMatcher({ exact: CAPTURE_TEXT.labels.sort })
 
     await closeChromeMenus()
     await openSelectedTabContextMenu()
     await hoverChromeMenuItem(topMatcher)
     if (!shallow) {
       await hoverChromeMenuItem(createLabelMatcher({
-        exact: activeLocale.labels.url,
+        exact: CAPTURE_TEXT.labels.url,
       }))
     }
     await driver.sleep(800)
@@ -876,10 +842,10 @@ async function captureNotificationScreenshot () {
       }
     }
   `, {
-    alphaUrl: pageUrl(activeLocale.tabs.alpha, 'notification-alpha'),
-    betaUrl: pageUrl(activeLocale.tabs.beta, 'notification-beta'),
-    deltaUrl: pageUrl(activeLocale.tabs.delta, 'notification-delta'),
-    gammaUrl: pageUrl(activeLocale.tabs.gamma, 'notification-gamma'),
+    alphaUrl: pageUrl(CAPTURE_TEXT.tabs.alpha, 'notification-alpha'),
+    betaUrl: pageUrl(CAPTURE_TEXT.tabs.beta, 'notification-beta'),
+    deltaUrl: pageUrl(CAPTURE_TEXT.tabs.delta, 'notification-delta'),
+    gammaUrl: pageUrl(CAPTURE_TEXT.tabs.gamma, 'notification-gamma'),
   })
 
   await captureScreenCrop(screenshotPath('notification'),
@@ -888,20 +854,12 @@ async function captureNotificationScreenshot () {
 
 async function main () {
   const targets = getRequestedTargets()
-  const locales = getRequestedLocales()
-  await mkdir(AMO_ROOT_DIR, { recursive: true })
-
-  for (const localeId of locales) {
-    await captureLocale(localeId, targets)
-  }
+  await mkdir(AMO_OUTPUT_DIR, { recursive: true })
+  await captureScreenshots(targets)
 }
 
-async function captureLocale (localeId, targets) {
-  activeLocale = LOCALES[localeId]
-  activeOutputDir = resolve(AMO_ROOT_DIR, localeId)
-  await mkdir(activeOutputDir, { recursive: true })
-
-  console.log('Locale ' + localeId)
+async function captureScreenshots (targets) {
+  console.log('Output ' + AMO_OUTPUT_DIR)
   driver = await createDriver()
   try {
     const addonId = await installAddon({ allowPrivateBrowsing: true })
@@ -949,25 +907,6 @@ function getRequestedTargets () {
       unsupportedTargets.join(', '))
   }
   return new Set(targets)
-}
-
-function getRequestedLocales () {
-  const rawLocales = process.env.AMO_LOCALES || process.env.AMO_LOCALE
-  if (!rawLocales) {
-    return DEFAULT_LOCALES
-  }
-
-  const locales = rawLocales.
-    split(',').
-    map((locale) => locale.trim()).
-    filter((locale) => locale.length > 0)
-  const unsupportedLocales = locales.filter((locale) =>
-    !Object.hasOwn(LOCALES, locale))
-  if (unsupportedLocales.length > 0) {
-    throw new Error('Unsupported AMO_LOCALES locale: ' +
-      unsupportedLocales.join(', '))
-  }
-  return locales
 }
 
 async function runIfRequested (targets, target, run) {
