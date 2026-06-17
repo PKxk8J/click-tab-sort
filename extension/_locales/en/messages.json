@@ -46,10 +46,10 @@
     "message": "Reverse Order"
   },
   "currentArea": {
-    "message": "Sort within clicked hierarchy"
+    "message": "Sort within clicked area"
   },
   "allGroups": {
-    "message": "Sort each hierarchy"
+    "message": "Sort each area"
   },
   "currentGroupOnly": {
     "message": "This group only"
@@ -76,7 +76,7 @@
     "message": "Sort Methods"
   },
   "hierarchyDescription": {
-    "message": "Hierarchy types: top level / groups / pinned tabs.\nWhen sorting at the top level, group order is based on the first tab in each group by default. Only title sorting can use the group name instead, depending on the behavior setting."
+    "message": "Area types: top level / groups / pinned tabs.\nWhen sorting at the top level, group order is based on the first tab in each group by default. Only title sorting can use the group name instead, depending on the behavior setting."
   },
   "behavior": {
     "message": "Behavior"

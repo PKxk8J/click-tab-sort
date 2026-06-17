@@ -7,7 +7,7 @@ Tab groups and pinned tabs are supported.
 
 ClickTabSort is a Firefox extension for sorting Firefox tabs from the right-click menu.
 You can sort the tab list directly from the menu.
-You can choose whether to sort only the clicked hierarchy, or to sort every hierarchy separately.
+You can choose whether to sort only the clicked area, or to sort every area separately.
 
 Choose from the following sort methods:
 
@@ -20,10 +20,10 @@ Choose from the following sort methods:
 
 For each sort method, you can also choose the target scope:
 
-- The clicked hierarchy
-- Each hierarchy
+- The clicked area
+- Each area
 
-Hierarchies are the top level, each tab group, and pinned tabs. They can be sorted separately.
+Areas are the top level, each tab group, and pinned tabs. They can be sorted separately.
 When sorting the top level, tab groups are treated as single blocks, so tabs inside a group are not mixed with tabs outside the group.
 Pinned tabs stay in the pinned area.
 In every case, split view tabs keep their internal order and are treated as a single block.
