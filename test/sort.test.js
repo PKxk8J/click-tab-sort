@@ -10,6 +10,7 @@ const state = {
   notifications: [],
   notificationAllowed: true,
   notificationError: undefined,
+  uiLanguage: 'en-US',
   forceGroupOnTabMove: undefined,
   ungrouped: [],
   queryCount: 0,
@@ -27,6 +28,7 @@ function resetTabs (tabs) {
   state.notifications = []
   state.notificationAllowed = true
   state.notificationError = undefined
+  state.uiLanguage = 'en-US'
   state.forceGroupOnTabMove = undefined
   state.ungrouped = []
   state.queryCount = 0
@@ -40,6 +42,10 @@ function getWindowTabs (windowId) {
 
 function getTabIds (windowId = 1) {
   return getWindowTabs(windowId).map((tab) => tab.id)
+}
+
+function getTitles (windowId = 1) {
+  return getWindowTabs(windowId).map((tab) => tab.title)
 }
 
 function getMemberships () {
@@ -103,6 +109,18 @@ function resetTabsWithDefaults (tabs) {
   resetTabs(tabs.map(withDefaults))
 }
 
+function resetTitleTabs (titles) {
+  resetTabsWithDefaults(titles.map((title, index) => ({
+    id: index + 1,
+    windowId: 1,
+    index,
+    pinned: false,
+    url: 'https://title-' + index + '.example/',
+    title,
+    lastAccessed: titles.length - index,
+  })))
+}
+
 globalThis.browser = {
   i18n: {
     getMessage: (key, substitutions) => {
@@ -117,6 +135,7 @@ globalThis.browser = {
       }
       return key
     },
+    getUILanguage: () => state.uiLanguage,
   },
   notifications: {
     create: async (id, options) => {
@@ -262,6 +281,198 @@ test('今の逆順では通常タブの現在順だけを反転する', async ()
   await run(1, 'reverse', false, false)
 
   assert.deepEqual(getTabIds(), [1, 4, 3, 2])
+})
+
+test('タイトルは文字種カテゴリ順でソートする', async () => {
+  const expected = [
+    '!項目',
+    '！項目',
+    '#項目',
+    '＃項目',
+    '-項目',
+    '－項目',
+    '_項目',
+    '＿項目',
+    '01項目',
+    '０１項目',
+    '10項目',
+    '１０項目',
+    '1項目',
+    '１項目',
+    '2項目',
+    '２項目',
+    'A項目',
+    'a項目',
+    'Ａ項目',
+    'ａ項目',
+    'B項目',
+    'Ｂ項目',
+    'Z項目',
+    'Ｚ項目',
+    'ぁ項目',
+    'ァ項目',
+    'ｧ項目',
+    'あ項目',
+    'ア項目',
+    'ｱ項目',
+    'い項目',
+    'イ項目',
+    'ｲ項目',
+    'か項目',
+    'カ項目',
+    'ｶ項目',
+    'が項目',
+    'ガ項目',
+    'ｶﾞ項目',
+    'は項目',
+    'ハ項目',
+    'ﾊ項目',
+    'ば項目',
+    'バ項目',
+    'ﾊﾞ項目',
+    'ぱ項目',
+    'パ項目',
+    'ﾊﾟ項目',
+    'ん項目',
+    'ン項目',
+    'ﾝ項目',
+    '漢字項目',
+  ]
+  resetTitleTabs([...expected].reverse())
+  state.uiLanguage = 'ja-JP'
+
+  await run(1, 'title', false, false)
+
+  assert.deepEqual(getTitles(), expected)
+})
+
+test('タイトルは数字も一文字ずつソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://10.example/', title: 'Page 10', lastAccessed: 30 },
+    { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://2.example/', title: 'Page 2', lastAccessed: 20 },
+    { id: 3, windowId: 1, index: 2, pinned: false, url: 'https://1.example/', title: 'Page 1', lastAccessed: 10 },
+  ])
+
+  await run(1, 'title', false, false)
+
+  assert.deepEqual(getTabIds(), [3, 1, 2])
+})
+
+test('タイトルは全角半角の数字と先頭ゼロも一文字ずつソートする', async () => {
+  const expected = [
+    '001',
+    '００１',
+    '01',
+    '０１',
+    '1',
+    '１',
+    '10',
+    '１０',
+    '2',
+    '２',
+  ]
+  resetTitleTabs([...expected].reverse())
+
+  await run(1, 'title', false, false)
+
+  assert.deepEqual(getTitles(), expected)
+})
+
+test('タイトルは全角半角の英字を同じ文字の近くにソートする', async () => {
+  const expected = [
+    'A',
+    'a',
+    'Ａ',
+    'ａ',
+    'B',
+    'b',
+    'Ｂ',
+    'ｂ',
+    'Z',
+    'z',
+    'Ｚ',
+    'ｚ',
+  ]
+  resetTitleTabs([...expected].reverse())
+
+  await run(1, 'title', false, false)
+
+  assert.deepEqual(getTitles(), expected)
+})
+
+test('タイトルは平仮名、片仮名、半角片仮名の順でソートする', async () => {
+  const expected = [
+    'ぁ',
+    'ァ',
+    'ｧ',
+    'あ',
+    'ア',
+    'ｱ',
+    'か',
+    'カ',
+    'ｶ',
+    'が',
+    'ガ',
+    'ｶﾞ',
+    'は',
+    'ハ',
+    'ﾊ',
+    'ば',
+    'バ',
+    'ﾊﾞ',
+    'ぱ',
+    'パ',
+    'ﾊﾟ',
+    'ん',
+    'ン',
+    'ﾝ',
+  ]
+  resetTitleTabs([...expected].reverse())
+
+  await run(1, 'title', false, false)
+
+  assert.deepEqual(getTitles(), expected)
+})
+
+test('タイトルは漢字かな交じりと英数字の複合も一文字ずつソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://10.example/', title: '漢字10B', lastAccessed: 50 },
+    { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://2b.example/', title: '漢字2B', lastAccessed: 40 },
+    { id: 3, windowId: 1, index: 2, pinned: false, url: 'https://2a.example/', title: '漢字2A', lastAccessed: 30 },
+    { id: 4, windowId: 1, index: 3, pinned: false, url: 'https://kana1.example/', title: 'かな1', lastAccessed: 20 },
+    { id: 5, windowId: 1, index: 4, pinned: false, url: 'https://kana2.example/', title: 'カナ2', lastAccessed: 10 },
+  ])
+  state.uiLanguage = 'ja-JP'
+
+  await run(1, 'title', false, false)
+
+  assert.deepEqual(getTabIds(), [4, 5, 1, 3, 2])
+})
+
+test('タイトルは複合した英数字の先頭ゼロも一文字ずつソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://001-2.example/', title: 'Project 001-2', lastAccessed: 40 },
+    { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://1-10.example/', title: 'Project 1-10', lastAccessed: 30 },
+    { id: 3, windowId: 1, index: 2, pinned: false, url: 'https://1-2.example/', title: 'Project 1-2', lastAccessed: 20 },
+    { id: 4, windowId: 1, index: 3, pinned: false, url: 'https://01-2.example/', title: 'Project 01-2', lastAccessed: 10 },
+  ])
+
+  await run(1, 'title', false, false)
+
+  assert.deepEqual(getTabIds(), [1, 4, 2, 3])
+})
+
+test('タイトルは UI 言語に合わせてソートする', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://a.example/', title: 'äta', lastAccessed: 30 },
+    { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://z.example/', title: 'zoo', lastAccessed: 20 },
+    { id: 3, windowId: 1, index: 2, pinned: false, url: 'https://b.example/', title: 'apple', lastAccessed: 10 },
+  ])
+  state.uiLanguage = 'sv'
+
+  await run(1, 'title', false, false)
+
+  assert.deepEqual(getTabIds(), [3, 2, 1])
 })
 
 test('通知が有効で権限がある場合は完了通知を送る', async () => {

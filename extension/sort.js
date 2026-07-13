@@ -26,6 +26,10 @@ import {
   isSplitViewTab,
   onError,
 } from './common.js'
+import {
+  createTitleComparator,
+  getTitleSortLocales,
+} from './title-sort.js'
 
 const {
   i18n,
@@ -36,8 +40,8 @@ const {
 const COMPARATOR_GENERATORS = {
   [KEY_URL]: () => (tab1, tab2) => tab1.url.localeCompare(tab2.url),
   [KEY_URL_REV]: () => (tab1, tab2) => tab2.url.localeCompare(tab1.url),
-  [KEY_TITLE]: () => (tab1, tab2) => tab1.title.localeCompare(tab2.title),
-  [KEY_TITLE_REV]: () => (tab1, tab2) => tab2.title.localeCompare(tab1.title),
+  [KEY_TITLE]: () => createTitleComparator(false, getTitleSortLocales(i18n)),
+  [KEY_TITLE_REV]: () => createTitleComparator(true, getTitleSortLocales(i18n)),
   [KEY_ID]: () => (tab1, tab2) => tab1.id - tab2.id,
   [KEY_ID_REV]: () => (tab1, tab2) => tab2.id - tab1.id,
   [KEY_ACCESS]: () => (tab1, tab2) => tab1.lastAccessed - tab2.lastAccessed,
