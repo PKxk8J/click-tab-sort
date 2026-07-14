@@ -33,16 +33,19 @@ const JAPANESE_CHARACTER_TYPE_ORDER = [
     titles: [' ', '　'],
   },
   {
-    type: 'ASCII 記号、全角記号、互換記号、絵文字',
+    type: 'ASCII 記号、全角記号、縦書き記号、互換記号、絵文字',
     titles: [
       '!', '！',
       '#', '＃',
       '$', '＄',
+      '(', '（', '︵',
       '-', '－',
       '_', '＿',
+      '{', '｛', '︷',
       '~', '～',
       '¥', '￥',
       '©', '²', '¼', '①', 'Ⓐ',
+      '❤', '❤︎', '❤️',
       '､', '、',
       '｡', '。',
       '｢', '「',
@@ -57,7 +60,7 @@ const JAPANESE_CHARACTER_TYPE_ORDER = [
     titles: [
       '0', '０', '٠',
       '02', '０２',
-      '1', '１', '𝟙',
+      '1', '１', '١', '۱', '१', '𝟙',
       '10', '１０', '١٠',
       '2', '２', '٢',
       '٣', // Arabic-Indic
@@ -75,6 +78,7 @@ const JAPANESE_CHARACTER_TYPE_ORDER = [
       'A', 'a', 'Ａ', 'ａ',
       'Á', 'á',
       'B', 'b', 'Ｂ', 'ｂ',
+      'Ǆ', 'ǅ', 'ǆ',
       'F', 'f', 'Ｆ', 'ｆ',
       'ff', 'ﬀ',
       'I', 'i', 'Ｉ', 'ｉ',
@@ -110,6 +114,7 @@ const JAPANESE_CHARACTER_TYPE_ORDER = [
       'Ա', // Armenian
       'א', // Hebrew
       'ا', // Arabic
+      'ب', 'ﺏ', 'ﺐ', 'ﺑ', 'ﺒ', // Arabic presentation forms
       'ሀ', // Ethiopic
       'क', // Devanagari
       'ক', // Bengali
@@ -223,6 +228,52 @@ test('大文字小文字・全角半角・かな種は主比較の後で区別�
   ])
 })
 
+test('タイトルケースは大文字と小文字の間に置く', () => {
+  const compare = createTextComparator()
+
+  assert.equal(compare('ǆA', 'ǄB') < 0, true)
+  assert.deepEqual(sortTitles(['ǆ', 'ǅ', 'Ǆ']), ['Ǆ', 'ǅ', 'ǆ'])
+})
+
+test('十進数字は数字体系の違いを主比較の後で区別する', () => {
+  const compare = createTextComparator()
+  const expected = ['1', '１', '١', '۱', '१', '𝟙']
+
+  assert.equal(compare('١0', '１2') < 0, true)
+  assert.deepEqual(sortTitles([...expected].reverse()), expected)
+})
+
+test('絵文字の表示セレクターは主比較の後で区別する', () => {
+  const compare = createTextComparator()
+
+  assert.equal(compare('❤️A', '❤B') < 0, true)
+  assert.deepEqual(sortTitles(['❤️', '❤︎', '❤']), [
+    '❤', '❤︎', '❤️',
+  ])
+})
+
+test('Arabic の位置別字形は主比較の後で区別する', () => {
+  const compare = createTextComparator()
+
+  assert.equal(compare('ﺒا', 'بب') < 0, true)
+  assert.deepEqual(sortTitles(['ﺒ', 'ﺑ', 'ﺐ', 'ﺏ', 'ب']), [
+    'ب', 'ﺏ', 'ﺐ', 'ﺑ', 'ﺒ',
+  ])
+})
+
+test('縦書き互換形は対応する記号の後で区別する', () => {
+  assert.deepEqual(sortTitles(['︷', '｛', '{', '︵', '（', '(']), [
+    '(', '（', '︵', '{', '｛', '︷',
+  ])
+})
+
+test('複数文字に展開される互換形は同一視しない', () => {
+  const compare = createTextComparator()
+
+  assert.notEqual(compare('ﻻ', 'لا'), 0)
+  assert.notEqual(compare('︙', '...'), 0)
+})
+
 test('拡張かなを発音、小書き、かな種の順で比較する', () => {
   const expected = [
     'ぁ', 'ァ', 'ｧ', 'あ', 'ア', 'ｱ',
@@ -307,6 +358,15 @@ test('日本語以外では UI 言語の照合順を優先する', () => {
   ])
 
   assert.deepEqual(sortTitles(['다', '나', '가'], 'ko'), ['가', '나', '다'])
+
+  assert.deepEqual(sortTitles(['ǆ', 'ǅ', 'Ǆ'], 'en'), ['Ǆ', 'ǅ', 'ǆ'])
+  assert.deepEqual(sortTitles(['❤️', '❤︎', '❤'], 'en'), ['❤', '❤︎', '❤️'])
+  assert.deepEqual(sortTitles(['ﺒ', 'ﺑ', 'ﺐ', 'ﺏ', 'ب'], 'ar'), [
+    'ب', 'ﺏ', 'ﺐ', 'ﺑ', 'ﺒ',
+  ])
+  assert.deepEqual(sortTitles(['𝟙', '१', '۱', '١', '１', '1'], 'ar'), [
+    '1', '１', '١', '۱', '१', '𝟙',
+  ])
 })
 
 test('逆順でも自然順の比較結果を反転する', () => {
@@ -325,7 +385,9 @@ test('タイトル比較は反対称性と推移律を満たす', () => {
   const compare = createTextComparator()
   const titles = [
     '', '!', '！', '1', '１', '01', 'A', 'a', 'Ａ', 'ａ',
-    'ぁ', 'あ', 'ア', 'ｱ', 'が', 'ガ', 'ｶﾞ', '漢', 'Б', '가', '😀',
+    '١', '۱', '१', '𝟙', 'Ǆ', 'ǅ', 'ǆ', '❤', '❤︎', '❤️',
+    '(', '（', '︵', 'ぁ', 'あ', 'ア', 'ｱ', 'が', 'ガ', 'ｶﾞ', '漢',
+    'Б', 'ب', 'ﺏ', 'ﺐ', 'ﺑ', 'ﺒ', '가', '😀',
   ]
 
   for (const title1 of titles) {

@@ -29,6 +29,7 @@ const HAN_EXTENSION_RE = /\p{Script_Extensions=Han}/u
 const LETTER_RE = /\p{Letter}/u
 const UPPER_CASE_RE = /\p{Uppercase}/u
 const LOWER_CASE_RE = /\p{Lowercase}/u
+const TITLE_CASE_RE = /^\p{General_Category=Titlecase_Letter}$/u
 const FULL_WIDTH_LATIN_RE = /[Ａ-Ｚａ-ｚ]/
 const HALF_WIDTH_KATAKANA_RE = /[ｦ-ﾟ]/
 const FULL_WIDTH_ASCII_SYMBOL_RE = /^[！-／：-＠［-｀｛-～]$/
@@ -36,6 +37,8 @@ const FULL_WIDTH_CURRENCY_SYMBOL_RE = /^[￠-￦]$/
 const HALF_WIDTH_JAPANESE_SYMBOL_RE = /^[｡｢｣､･]$/
 const FULL_WIDTH_JAPANESE_SYMBOL_RE = /^[。「」、・]$/
 const FULL_WIDTH_SPACE = '\u3000'
+const TEXT_PRESENTATION_SELECTOR = '\ufe0e'
+const EMOJI_PRESENTATION_SELECTOR = '\ufe0f'
 
 const HALF_WIDTH_RANK = 0
 const FULL_WIDTH_RANK = 1
@@ -44,8 +47,24 @@ const HIRAGANA_RANK = 0
 const KATAKANA_RANK = 1
 const HALF_WIDTH_KATAKANA_RANK = 2
 const UPPER_CASE_RANK = 0
-const LOWER_CASE_RANK = 1
-const OTHER_CASE_RANK = 2
+const TITLE_CASE_RANK = 1
+const LOWER_CASE_RANK = 2
+const OTHER_CASE_RANK = 3
+const BASE_FORM_RANK = 0
+const COMPATIBILITY_FORM_RANK = 1
+const DEFAULT_PRESENTATION_RANK = 0
+const TEXT_PRESENTATION_RANK = 1
+const EMOJI_PRESENTATION_RANK = 2
+
+function isArabicPresentationForm (codePoint) {
+  return (codePoint >= 0xfb50 && codePoint <= 0xfdff) ||
+    (codePoint >= 0xfe70 && codePoint <= 0xfefc)
+}
+
+function isVerticalForm (codePoint) {
+  return (codePoint >= 0xfe10 && codePoint <= 0xfe1f) ||
+    (codePoint >= 0xfe30 && codePoint <= 0xfe4f)
+}
 
 function addLocale (locales, locale) {
   if (typeof locale !== 'string' || !locale) {
@@ -163,6 +182,7 @@ function getSymbolWidthRank (unit) {
   }
   if (FULL_WIDTH_ASCII_SYMBOL_RE.test(unit) ||
       FULL_WIDTH_CURRENCY_SYMBOL_RE.test(unit) ||
+      isVerticalForm(unit.codePointAt(0)) ||
       unit === FULL_WIDTH_SPACE ||
       FULL_WIDTH_JAPANESE_SYMBOL_RE.test(unit)) {
     return FULL_WIDTH_RANK
@@ -173,6 +193,9 @@ function getSymbolWidthRank (unit) {
 function getCaseRank (baseCharacter) {
   if (UPPER_CASE_RE.test(baseCharacter)) {
     return UPPER_CASE_RANK
+  }
+  if (TITLE_CASE_RE.test(baseCharacter)) {
+    return TITLE_CASE_RANK
   }
   if (LOWER_CASE_RE.test(baseCharacter)) {
     return LOWER_CASE_RANK
@@ -206,50 +229,91 @@ function normalizeKanaWidth (unit) {
   return HALF_WIDTH_KATAKANA_RE.test(unit) ? unit.normalize('NFKC') : unit
 }
 
-function makeTitleUnit (unit) {
-  if (DECIMAL_NUMBER_RE.test(unit)) {
-    return {
-      category: 'number',
-      primary: unit,
-      widthRank: getDigitWidthRank(unit),
-    }
+function getCompatibilityRank (unit) {
+  const codePoint = unit.codePointAt(0)
+  return isArabicPresentationForm(codePoint) || isVerticalForm(codePoint)
+    ? COMPATIBILITY_FORM_RANK
+    : BASE_FORM_RANK
+}
+
+function getPresentationRank (unit) {
+  if (unit.length < 2) {
+    return DEFAULT_PRESENTATION_RANK
+  }
+  if (unit.includes(TEXT_PRESENTATION_SELECTOR)) {
+    return TEXT_PRESENTATION_RANK
+  }
+  if (unit.includes(EMOJI_PRESENTATION_SELECTOR)) {
+    return EMOJI_PRESENTATION_RANK
+  }
+  return DEFAULT_PRESENTATION_RANK
+}
+
+function normalizeCompatibilityPresentation (unit, compatibilityRank) {
+  if (compatibilityRank === BASE_FORM_RANK) {
+    return unit
   }
 
-  const baseCharacter = getBaseCharacter(unit)
-  const category = getTitleCategory(unit, baseCharacter)
+  const normalized = unit.normalize('NFKC')
+  // Keep compatibility ligatures and other multi-character expansions distinct.
+  return Array.from(normalized).length === 1 ? normalized : unit
+}
+
+function normalizeTitleUnitPrimary (
+  unit,
+  category,
+  compatibilityRank,
+  presentationRank,
+) {
+  const withoutPresentation = presentationRank === DEFAULT_PRESENTATION_RANK
+    ? unit
+    : unit.replaceAll(TEXT_PRESENTATION_SELECTOR, '').
+      replaceAll(EMOJI_PRESENTATION_SELECTOR, '')
+  const normalized = normalizeCompatibilityPresentation(
+    withoutPresentation,
+    compatibilityRank,
+  )
   if (category === 'symbol') {
-    return {
-      category,
-      primary: normalizeSymbolWidth(unit),
-      widthRank: getSymbolWidthRank(unit),
-    }
-  }
-  if (category === 'latin') {
-    return {
-      caseRank: getCaseRank(baseCharacter),
-      category,
-      primary: unit,
-      widthRank: getLatinWidthRank(unit),
-    }
+    return normalizeSymbolWidth(normalized)
   }
   if (category === 'kana') {
-    return {
-      category,
-      primary: normalizeKanaWidth(unit),
-      variantRank: getKanaRank(unit, baseCharacter),
-    }
+    return normalizeKanaWidth(normalized)
   }
-  if (category === 'otherLetter') {
-    return {
-      caseRank: getCaseRank(baseCharacter),
-      category,
-      primary: unit,
-    }
-  }
-  return {
+  return normalized
+}
+
+function makeTitleUnit (unit) {
+  const baseCharacter = getBaseCharacter(unit)
+  const category = DECIMAL_NUMBER_RE.test(unit)
+    ? 'number'
+    : getTitleCategory(unit, baseCharacter)
+  const compatibilityRank = getCompatibilityRank(unit)
+  const presentationRank = getPresentationRank(unit)
+  const titleUnit = {
     category,
-    primary: unit,
+    compatibilityRank,
+    original: unit,
+    presentationRank,
+    primary: normalizeTitleUnitPrimary(
+      unit,
+      category,
+      compatibilityRank,
+      presentationRank,
+    ),
   }
+  if (category === 'number') {
+    titleUnit.widthRank = getDigitWidthRank(unit)
+  } else if (category === 'symbol') {
+    titleUnit.widthRank = getSymbolWidthRank(unit)
+  } else if (category === 'latin') {
+    titleUnit.caseRank = getCaseRank(baseCharacter)
+    titleUnit.widthRank = getLatinWidthRank(unit)
+  } else if (category === 'kana') {
+    titleUnit.variantRank = getKanaRank(unit, baseCharacter)
+  } else if (category === 'otherLetter') {
+    titleUnit.caseRank = getCaseRank(baseCharacter)
+  }
+  return titleUnit
 }
 
 function analyzeTitle (normalizedTitle, segmenter) {
@@ -280,24 +344,34 @@ function compareTextPrimary (unit1, unit2, collators) {
   return collators.text.compare(unit1.primary, unit2.primary)
 }
 
-function compareTextVariant (unit1, unit2) {
+function compareTitleUnitVariant (unit1, unit2) {
+  let categoryResult = 0
   if (unit1.category === 'latin') {
-    const widthResult = unit1.widthRank - unit2.widthRank
-    if (widthResult !== 0) {
-      return widthResult
+    categoryResult = unit1.widthRank - unit2.widthRank
+    if (categoryResult === 0) {
+      categoryResult = unit1.caseRank - unit2.caseRank
     }
-    return unit1.caseRank - unit2.caseRank
+  } else if (unit1.category === 'kana') {
+    categoryResult = unit1.variantRank - unit2.variantRank
+  } else if (unit1.category === 'number' || unit1.category === 'symbol') {
+    categoryResult = unit1.widthRank - unit2.widthRank
+  } else if (unit1.category === 'otherLetter') {
+    categoryResult = unit1.caseRank - unit2.caseRank
   }
-  if (unit1.category === 'kana') {
-    return unit1.variantRank - unit2.variantRank
+  if (categoryResult !== 0) {
+    return categoryResult
   }
-  if (unit1.category === 'number' || unit1.category === 'symbol') {
-    return unit1.widthRank - unit2.widthRank
+
+  const compatibilityResult = unit1.compatibilityRank -
+    unit2.compatibilityRank
+  if (compatibilityResult !== 0) {
+    return compatibilityResult
   }
-  if (unit1.category === 'otherLetter') {
-    return unit1.caseRank - unit2.caseRank
-  }
-  return 0
+
+  const presentationResult = unit1.presentationRank - unit2.presentationRank
+  return presentationResult !== 0
+    ? presentationResult
+    : compareCodePointString(unit1.original, unit2.original)
 }
 
 function compareTitleUnitPrimary (unit1, unit2, collators) {
@@ -327,7 +401,10 @@ function compareTitleUnits (units1, units2, collators) {
   }
 
   for (let index = 0; index < units1.length; index++) {
-    const variantResult = compareTextVariant(units1[index], units2[index])
+    const variantResult = compareTitleUnitVariant(
+      units1[index],
+      units2[index],
+    )
     if (variantResult !== 0) {
       return variantResult
     }
