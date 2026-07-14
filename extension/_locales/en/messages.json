@@ -12,9 +12,6 @@
   "sort": {
     "message": "Sort Tabs"
   },
-  "sortBy": {
-    "message": "Sort Tabs by $1"
-  },
   "url": {
     "message": "URL (A-Z)"
   },
@@ -50,12 +47,6 @@
   },
   "allGroups": {
     "message": "Sort each area"
-  },
-  "currentGroupOnly": {
-    "message": "This group only"
-  },
-  "topLevelOnly": {
-    "message": "Top level only"
   },
   "topLevelScope": {
     "message": "Top level"

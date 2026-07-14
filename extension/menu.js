@@ -385,8 +385,12 @@ async function getCurrentTab () {
   return tab
 }
 
+async function getTargetTab (tab) {
+  return tab || await getCurrentTab()
+}
+
 async function getContextState (tab) {
-  const targetTab = tab || await getCurrentTab()
+  const targetTab = await getTargetTab(tab)
   if (!targetTab) {
     return {}
   }
@@ -467,9 +471,7 @@ async function handleMenuClick (info, tab) {
     return
   }
 
-  const {
-    targetTab,
-  } = await getContextState(tab)
+  const targetTab = await getTargetTab(tab)
   if (!targetTab) {
     return
   }

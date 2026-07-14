@@ -10,6 +10,7 @@ const state = {
   notifications: [],
   notificationAllowed: true,
   notificationError: undefined,
+  uiLanguage: 'en-US',
   forceGroupOnTabMove: undefined,
   ungrouped: [],
   queryCount: 0,
@@ -27,6 +28,7 @@ function resetTabs (tabs) {
   state.notifications = []
   state.notificationAllowed = true
   state.notificationError = undefined
+  state.uiLanguage = 'en-US'
   state.forceGroupOnTabMove = undefined
   state.ungrouped = []
   state.queryCount = 0
@@ -117,6 +119,7 @@ globalThis.browser = {
       }
       return key
     },
+    getUILanguage: () => state.uiLanguage,
   },
   notifications: {
     create: async (id, options) => {
@@ -262,6 +265,19 @@ test('今の逆順では通常タブの現在順だけを反転する', async ()
   await run(1, 'reverse', false, false)
 
   assert.deepEqual(getTabIds(), [1, 4, 3, 2])
+})
+
+test('タイトルソートは UI 言語に合わせた比較器を使う', async () => {
+  resetTabsWithDefaults([
+    { id: 1, windowId: 1, index: 0, pinned: false, url: 'https://a.example/', title: 'äta', lastAccessed: 30 },
+    { id: 2, windowId: 1, index: 1, pinned: false, url: 'https://z.example/', title: 'zoo', lastAccessed: 20 },
+    { id: 3, windowId: 1, index: 2, pinned: false, url: 'https://b.example/', title: 'apple', lastAccessed: 10 },
+  ])
+  state.uiLanguage = 'sv'
+
+  await run(1, 'title', false, false)
+
+  assert.deepEqual(getTabIds(), [3, 2, 1])
 })
 
 test('通知が有効で権限がある場合は完了通知を送る', async () => {

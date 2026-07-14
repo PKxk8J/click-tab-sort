@@ -95,7 +95,7 @@ async function restore () {
 
 async function applyNotificationPermission (notification) {
   if (notification) {
-    return await permissions.request(NOTIFICATION_PERMISSION)
+    return permissions.request(NOTIFICATION_PERMISSION)
   }
   if (await permissions.contains(NOTIFICATION_PERMISSION)) {
     await permissions.remove(NOTIFICATION_PERMISSION)
@@ -154,20 +154,25 @@ function queueSave () {
 }
 
 async function runSaveQueue () {
+  let lastError
   try {
     while (saveRequested) {
       saveRequested = false
-      await save()
+      try {
+        await save()
+        lastError = undefined
+      } catch (error) {
+        lastError = error
+        onError(error)
+      }
     }
-    setSaveStatus(KEY_SAVE_STATUS_SAVED, 'saved', true)
-  } catch (error) {
-    setSaveStatus(KEY_SAVE_STATUS_FAILED, 'error')
-    onError(error)
+    if (lastError) {
+      setSaveStatus(KEY_SAVE_STATUS_FAILED, 'error')
+    } else {
+      setSaveStatus(KEY_SAVE_STATUS_SAVED, 'saved', true)
+    }
   } finally {
     savePromise = undefined
-    if (saveRequested) {
-      queueSave()
-    }
   }
 }
 

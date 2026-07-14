@@ -8,6 +8,7 @@ const state = {
   moves: [],
   refreshCount: 0,
   storageGetWait: undefined,
+  tabQueries: [],
 }
 
 function createEvent () {
@@ -69,6 +70,7 @@ function resetState ({ menuItems, tabs }) {
   state.moves = []
   state.refreshCount = 0
   state.storageGetWait = undefined
+  state.tabQueries = []
 }
 
 globalThis.browser = {
@@ -149,6 +151,7 @@ globalThis.browser = {
   },
   tabs: {
     query: async (query = {}) => {
+      state.tabQueries.push({ ...query })
       let result = state.tabs
       if (query.windowId !== undefined) {
         result = result.filter((tab) => tab.windowId === query.windowId)
@@ -296,10 +299,15 @@ test('トップレベル以外の階層がない場合は単一の実行候補�
   assert.deepEqual(getChildIds('sort'), [])
   assert.equal(state.refreshCount, 1)
 
+  state.tabQueries = []
   await clickMenu('sort:action', 2)
 
   assert.deepEqual(state.moves, [
     { ids: 2, properties: { index: 0 } },
+  ])
+  assert.deepEqual(state.tabQueries, [
+    { windowId: 1 },
+    { windowId: 1 },
   ])
 })
 

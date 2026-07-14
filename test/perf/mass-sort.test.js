@@ -3,9 +3,11 @@ import { after, before, describe, test } from 'node:test'
 import process from 'node:process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Builder } from 'selenium-webdriver'
-import firefox from 'selenium-webdriver/firefox.js'
-import { download } from 'geckodriver'
+import {
+  createFirefoxDriver,
+  getExtensionBaseUrl,
+  runExtensionScript,
+} from '../../tools/firefox-extension-driver.js'
 
 const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const EXTENSION_DIR = resolve(ROOT_DIR, 'extension')
@@ -42,86 +44,20 @@ function readPositiveNumber (name, defaultValue) {
   return parsed
 }
 
-async function createDriver () {
-  const geckoDriverPath = process.env.GECKODRIVER_PATH || await download()
-  const options = new firefox.Options()
-  options.addArguments('-remote-allow-system-access')
-  if (process.env.E2E_HEADLESS !== '0') {
-    options.addArguments('-headless')
-  }
-  if (process.env.FIREFOX_BINARY) {
-    options.setBinary(process.env.FIREFOX_BINARY)
-  }
-
-  return new Builder().
-    forBrowser('firefox').
-    setFirefoxOptions(options).
-    setFirefoxService(new firefox.ServiceBuilder(geckoDriverPath)).
-    build()
-}
-
-async function getExtensionBaseUrl (addonId) {
-  await driver.setContext(firefox.Context.CHROME)
-  try {
-    return await driver.executeScript(`
-      const policy = WebExtensionPolicy.getByID(arguments[0])
-      return policy?.getURL('') || null
-    `, addonId)
-  } finally {
-    await driver.setContext(firefox.Context.CONTENT)
-  }
-}
-
 async function openExtensionPage (path) {
   await driver.get(extensionBaseUrl + path)
 }
 
-async function runExtensionScript (script, ...args) {
-  const result = await driver.executeAsyncScript(`
-    const done = arguments[arguments.length - 1]
-    const args = Array.from(arguments).slice(0, -1)
-
-    async function run () {
-      const wait = msec => new Promise(resolve => setTimeout(resolve, msec))
-      async function waitUntil (predicate, timeout = 30000) {
-        const startedAt = Date.now()
-        while (Date.now() - startedAt < timeout) {
-          const value = await predicate()
-          if (value) {
-            return value
-          }
-          await wait(100)
-        }
-        return await predicate()
-      }
-
-      ${script}
-    }
-
-    run().then(
-      value => done({ ok: true, value }),
-      error => done({
-        ok: false,
-        message: error?.message || String(error),
-        stack: error?.stack || '',
-      }),
-    )
-  `, ...args)
-
-  if (!result.ok) {
-    throw new Error(result.stack || result.message)
-  }
-  return result.value
-}
-
 describe('Firefox real tab sorting performance', () => {
   before(async () => {
-    driver = await createDriver()
+    driver = await createFirefoxDriver({
+      headless: process.env.E2E_HEADLESS !== '0',
+    })
     await driver.manage().setTimeouts({
       script: PERF_TIMEOUT_MS,
     })
     const addonId = await driver.installAddon(EXTENSION_DIR, true)
-    extensionBaseUrl = await getExtensionBaseUrl(addonId)
+    extensionBaseUrl = await getExtensionBaseUrl(driver, addonId)
     assert.ok(extensionBaseUrl, '拡張機能の moz-extension URL を取得できません')
     await openExtensionPage('options.html')
   })
@@ -138,7 +74,7 @@ describe('Firefox real tab sorting performance', () => {
     const tabCount = readMinInteger('PERF_TAB_COUNT', DEFAULT_TAB_COUNT, 2)
     const maxMs = readPositiveNumber('PERF_MAX_MS', DEFAULT_MAX_MS)
 
-    const result = await runExtensionScript(`
+    const result = await runExtensionScript(driver, `
       const { run } = await import(browser.runtime.getURL('sort.js'))
       const tabCount = args[0]
       const token = 'click-tab-sort-perf-' + Date.now() + '-' + Math.random()
@@ -234,7 +170,7 @@ describe('Firefox real tab sorting performance', () => {
           await browser.windows.remove(testWindow.id).catch(() => {})
         }
       }
-    `, tabCount)
+    `, [tabCount], { waitTimeout: 30_000 })
 
     t.diagnostic([
       `tabs=${result.tabCount}`,
