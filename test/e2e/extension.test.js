@@ -4,9 +4,12 @@ import process from 'node:process'
 import { createServer } from 'node:http'
 import { dirname, resolve } from 'node:path'
 import { URL, fileURLToPath } from 'node:url'
-import { Builder, By, until } from 'selenium-webdriver'
-import firefox from 'selenium-webdriver/firefox.js'
-import { download } from 'geckodriver'
+import { By, until } from 'selenium-webdriver'
+import {
+  createFirefoxDriver,
+  getExtensionBaseUrl,
+  runExtensionScript as executeExtensionScript,
+} from '../../tools/firefox-extension-driver.js'
 
 const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const EXTENSION_DIR = resolve(ROOT_DIR, 'extension')
@@ -85,36 +88,6 @@ async function closeFixtureServer () {
   fixtureServer = undefined
 }
 
-async function createDriver () {
-  const geckoDriverPath = process.env.GECKODRIVER_PATH || await download()
-  const options = new firefox.Options()
-  options.addArguments('-remote-allow-system-access')
-  if (process.env.E2E_HEADLESS !== '0') {
-    options.addArguments('-headless')
-  }
-  if (process.env.FIREFOX_BINARY) {
-    options.setBinary(process.env.FIREFOX_BINARY)
-  }
-
-  return new Builder().
-    forBrowser('firefox').
-    setFirefoxOptions(options).
-    setFirefoxService(new firefox.ServiceBuilder(geckoDriverPath)).
-    build()
-}
-
-async function getExtensionBaseUrl (addonId) {
-  await driver.setContext(firefox.Context.CHROME)
-  try {
-    return await driver.executeScript(`
-      const policy = WebExtensionPolicy.getByID(arguments[0])
-      return policy?.getURL('') || null
-    `, addonId)
-  } finally {
-    await driver.setContext(firefox.Context.CONTENT)
-  }
-}
-
 async function openExtensionPage (path) {
   await driver.get(extensionBaseUrl + path)
 }
@@ -141,42 +114,8 @@ async function waitForOptionsPage () {
   }, WAIT_MS)
 }
 
-async function runExtensionScript (script, ...args) {
-  const result = await driver.executeAsyncScript(`
-    const done = arguments[arguments.length - 1]
-    const args = Array.from(arguments).slice(0, -1)
-
-    async function run () {
-      const wait = msec => new Promise(resolve => setTimeout(resolve, msec))
-      async function waitUntil (predicate, timeout = 5000) {
-        const startedAt = Date.now()
-        while (Date.now() - startedAt < timeout) {
-          const value = await predicate()
-          if (value) {
-            return value
-          }
-          await wait(100)
-        }
-        return await predicate()
-      }
-
-      ${script}
-    }
-
-    run().then(
-      value => done({ ok: true, value }),
-      error => done({
-        ok: false,
-        message: error?.message || String(error),
-        stack: error?.stack || '',
-      }),
-    )
-  `, ...args)
-
-  if (!result.ok) {
-    throw new Error([result.message, result.stack].filter(Boolean).join('\n'))
-  }
-  return result.value
+function runExtensionScript (script, ...args) {
+  return executeExtensionScript(driver, script, args)
 }
 
 async function runSortFixture (scenarioScript, ...args) {
@@ -428,9 +367,11 @@ describe('Firefox extension E2E', () => {
     fixtureServer = fixture.server
     fixtureBaseUrl = fixture.baseUrl
 
-    driver = await createDriver()
+    driver = await createFirefoxDriver({
+      headless: process.env.E2E_HEADLESS !== '0',
+    })
     const addonId = await driver.installAddon(EXTENSION_DIR, true)
-    extensionBaseUrl = await getExtensionBaseUrl(addonId)
+    extensionBaseUrl = await getExtensionBaseUrl(driver, addonId)
     assert.ok(extensionBaseUrl, '拡張機能の moz-extension URL を取得できません')
   })
 

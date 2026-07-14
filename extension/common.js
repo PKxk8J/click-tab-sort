@@ -22,7 +22,6 @@ export const KEY_REV = 'reverse'
 
 export const KEY_CURRENT_AREA = 'currentArea'
 export const KEY_ALL_GROUPS = 'allGroups'
-export const KEY_CURRENT_GROUP_ONLY = 'currentGroupOnly'
 export const KEY_TOP_LEVEL_ONLY = 'topLevelOnly'
 export const KEY_TOP_LEVEL_SCOPE = 'topLevelScope'
 export const KEY_GROUP_SCOPE = 'groupScope'
@@ -30,7 +29,6 @@ export const KEY_PINNED_SCOPE = 'pinnedScope'
 export const KEY_ALL_GROUPS_MENU = 'allGroupsMenu'
 
 export const KEY_SORT = 'sort'
-export const KEY_SORT_BY = 'sortBy'
 export const KEY_CONTEXTS = 'contexts'
 export const KEY_MENU_ITEMS = 'menuItems'
 export const KEY_HIERARCHY_DESCRIPTION = 'hierarchyDescription'
@@ -106,22 +104,6 @@ export function isGroupedTab (tab) {
 export function isSplitViewTab (tab) {
   return tab?.splitViewId !== undefined &&
     tab.splitViewId !== getNoSplitViewId()
-}
-
-export function getSortedTabsInSegment (tabList, sortPinned) {
-  const sortedTabs = [...tabList].sort((tab1, tab2) => tab1.index - tab2.index)
-
-  let firstUnpinnedIndex = 0
-  for (; firstUnpinnedIndex < sortedTabs.length; firstUnpinnedIndex++) {
-    if (!sortedTabs[firstUnpinnedIndex].pinned) {
-      break
-    }
-  }
-
-  if (sortPinned) {
-    return sortedTabs.slice(0, firstUnpinnedIndex)
-  }
-  return sortedTabs.slice(firstUnpinnedIndex)
 }
 
 export async function getValue (key, defaultValue) {

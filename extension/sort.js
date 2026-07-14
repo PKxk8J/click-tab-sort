@@ -21,7 +21,6 @@ import {
   NOTIFICATION_INTERVAL,
   NOTIFICATION_PERMISSION,
   debug,
-  getSortedTabsInSegment,
   isGroupedTab,
   isSplitViewTab,
   onError,
@@ -313,8 +312,20 @@ async function querySortedTabs (windowId, progress) {
   return tabList.sort((tab1, tab2) => tab1.index - tab2.index)
 }
 
+function getTabsInSegment (sortedTabs, sortPinned) {
+  let firstUnpinnedIndex = 0
+  while (firstUnpinnedIndex < sortedTabs.length &&
+         sortedTabs[firstUnpinnedIndex].pinned) {
+    firstUnpinnedIndex++
+  }
+
+  return sortPinned
+    ? sortedTabs.slice(0, firstUnpinnedIndex)
+    : sortedTabs.slice(firstUnpinnedIndex)
+}
+
 async function querySortedTabsInSegment (windowId, sortPinned, progress) {
-  return getSortedTabsInSegment(await querySortedTabs(windowId, progress),
+  return getTabsInSegment(await querySortedTabs(windowId, progress),
     sortPinned)
 }
 
@@ -437,20 +448,20 @@ async function sortTabs (windowId, comparator, sortPinned, scope, targetTabId,
   if (scope === KEY_TOP_LEVEL_ONLY) {
     const tabList = await querySortedTabs(windowId, progress)
     await sortTopLevelInSegment(windowId,
-      getSortedTabsInSegment(tabList, false), comparator, progress,
+      getTabsInSegment(tabList, false), comparator, progress,
       useGroupNameAsGroupTitle)
     return
   }
 
   if (scope === KEY_ALL_GROUPS) {
     const tabList = await querySortedTabs(windowId, progress)
-    await sortTabHierarchyInSegment(getSortedTabsInSegment(tabList, true),
+    await sortTabHierarchyInSegment(getTabsInSegment(tabList, true),
       comparator, progress)
-    await sortAllGroupsInSegment(getSortedTabsInSegment(tabList, false),
+    await sortAllGroupsInSegment(getTabsInSegment(tabList, false),
       comparator, progress)
     const latestTabList = await querySortedTabs(windowId, progress)
     await sortTopLevelInSegment(windowId,
-      getSortedTabsInSegment(latestTabList, false), comparator, progress,
+      getTabsInSegment(latestTabList, false), comparator, progress,
       useGroupNameAsGroupTitle)
     return
   }

@@ -12,9 +12,6 @@
   "sort": {
     "message": "タブ並べ替え"
   },
-  "sortBy": {
-    "message": "$1でタブを並べ替え"
-  },
   "url": {
     "message": "URL（A-Z）"
   },
@@ -50,12 +47,6 @@
   },
   "allGroups": {
     "message": "全ての階層に対して階層ごとに並べ替え"
-  },
-  "currentGroupOnly": {
-    "message": "このグループだけ"
-  },
-  "topLevelOnly": {
-    "message": "トップレベルだけ"
   },
   "topLevelScope": {
     "message": "トップレベル"

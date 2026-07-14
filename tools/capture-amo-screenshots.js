@@ -7,9 +7,13 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath, URLSearchParams } from 'node:url'
 import { promisify } from 'node:util'
 import { createRequire } from 'node:module'
-import { Builder, By, until } from 'selenium-webdriver'
+import { By, until } from 'selenium-webdriver'
 import firefox from 'selenium-webdriver/firefox.js'
-import { download } from 'geckodriver'
+import {
+  createFirefoxDriver,
+  getExtensionBaseUrl,
+  runExtensionScript as executeExtensionScript,
+} from './firefox-extension-driver.js'
 
 const require = createRequire(import.meta.url)
 const { Command } = require('selenium-webdriver/lib/command')
@@ -119,28 +123,6 @@ async function writePng (path, base64) {
   await writeFile(path, Buffer.from(base64, 'base64'))
 }
 
-async function createDriver () {
-  const geckoDriverPath = process.env.GECKODRIVER_PATH || await download()
-  const options = new firefox.Options()
-  options.addArguments('-remote-allow-system-access')
-  options.setPreference('intl.locale.requested', CAPTURE_TEXT.firefoxLocale)
-  options.setPreference('layout.css.prefers-color-scheme.content-override', 0)
-  options.setPreference('ui.systemUsesDarkTheme', 1)
-
-  if (process.env.AMO_HEADLESS === '1') {
-    options.addArguments('-headless')
-  }
-  if (process.env.FIREFOX_BINARY) {
-    options.setBinary(process.env.FIREFOX_BINARY)
-  }
-
-  return new Builder().
-    forBrowser('firefox').
-    setFirefoxOptions(options).
-    setFirefoxService(new firefox.ServiceBuilder(geckoDriverPath)).
-    build()
-}
-
 async function installAddon ({ allowPrivateBrowsing = false } = {}) {
   const stats = statSync(EXTENSION_DIR)
   let buffer
@@ -190,58 +172,12 @@ async function installAddon ({ allowPrivateBrowsing = false } = {}) {
   )
 }
 
-async function getExtensionBaseUrl (addonId) {
-  await driver.setContext(firefox.Context.CHROME)
-  try {
-    return await driver.executeScript(`
-      const policy = WebExtensionPolicy.getByID(arguments[0])
-      return policy?.getURL('') || null
-    `, addonId)
-  } finally {
-    await driver.setContext(firefox.Context.CONTENT)
-  }
-}
-
 async function openExtensionPage (path) {
   await driver.get(extensionBaseUrl + path)
 }
 
-async function runExtensionScript (script, ...args) {
-  const result = await driver.executeAsyncScript(`
-    const done = arguments[arguments.length - 1]
-    const args = Array.from(arguments).slice(0, -1)
-
-    async function run () {
-      const wait = msec => new Promise(resolve => setTimeout(resolve, msec))
-      async function waitUntil (predicate, timeout = 5000) {
-        const startedAt = Date.now()
-        while (Date.now() - startedAt < timeout) {
-          const value = await predicate()
-          if (value) {
-            return value
-          }
-          await wait(100)
-        }
-        return await predicate()
-      }
-
-      ${script}
-    }
-
-    run().then(
-      value => done({ ok: true, value }),
-      error => done({
-        ok: false,
-        message: error?.message || String(error),
-        stack: error?.stack || '',
-      }),
-    )
-  `, ...args)
-
-  if (!result.ok) {
-    throw new Error(result.stack || result.message)
-  }
-  return result.value
+function runExtensionScript (script, ...args) {
+  return executeExtensionScript(driver, script, args)
 }
 
 async function waitForOptionsPage () {
@@ -860,10 +796,17 @@ async function main () {
 
 async function captureScreenshots (targets) {
   console.log('Output ' + AMO_OUTPUT_DIR)
-  driver = await createDriver()
+  driver = await createFirefoxDriver({
+    headless: process.env.AMO_HEADLESS === '1',
+    preferences: {
+      'intl.locale.requested': CAPTURE_TEXT.firefoxLocale,
+      'layout.css.prefers-color-scheme.content-override': 0,
+      'ui.systemUsesDarkTheme': 1,
+    },
+  })
   try {
     const addonId = await installAddon({ allowPrivateBrowsing: true })
-    extensionBaseUrl = await getExtensionBaseUrl(addonId)
+    extensionBaseUrl = await getExtensionBaseUrl(driver, addonId)
     if (!extensionBaseUrl) {
       throw new Error('Could not resolve the extension moz-extension URL')
     }

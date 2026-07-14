@@ -1,8 +1,3 @@
-const GENERIC_COLLATOR_OPTIONS = {
-  usage: 'sort',
-  numeric: false,
-  sensitivity: 'accent',
-}
 const TEXT_COLLATOR_OPTIONS = {
   usage: 'sort',
   numeric: false,
@@ -14,12 +9,6 @@ const KANA_COLLATOR_OPTIONS = {
   sensitivity: 'variant',
   caseFirst: 'lower',
 }
-const OTHER_LETTER_COLLATOR_OPTIONS = {
-  usage: 'sort',
-  numeric: false,
-  sensitivity: 'accent',
-}
-
 const TITLE_CATEGORY_ORDER = {
   symbol: 0,
   number: 1,
@@ -115,8 +104,7 @@ function normalizeTitle (title) {
   return String(title ?? '').normalize('NFC')
 }
 
-function getTitleUnits (title, segmenter) {
-  const normalizedTitle = normalizeTitle(title)
+function getTitleUnits (normalizedTitle, segmenter) {
   if (!segmenter) {
     return Array.from(normalizedTitle)
   }
@@ -136,12 +124,7 @@ function isProlongedSoundMark (unit) {
   return unit === 'ー' || unit === 'ｰ'
 }
 
-function getTitleCategory (unit) {
-  if (DECIMAL_NUMBER_RE.test(unit)) {
-    return 'number'
-  }
-
-  const baseCharacter = getBaseCharacter(unit)
+function getTitleCategory (unit, baseCharacter) {
   if (LATIN_RE.test(baseCharacter)) {
     return 'latin'
   }
@@ -187,8 +170,7 @@ function getSymbolWidthRank (unit) {
   return HALF_WIDTH_RANK
 }
 
-function getCaseRank (unit) {
-  const baseCharacter = getBaseCharacter(unit)
+function getCaseRank (baseCharacter) {
   if (UPPER_CASE_RE.test(baseCharacter)) {
     return UPPER_CASE_RANK
   }
@@ -198,11 +180,11 @@ function getCaseRank (unit) {
   return OTHER_CASE_RANK
 }
 
-function getKanaRank (unit) {
+function getKanaRank (unit, baseCharacter) {
   if (HALF_WIDTH_KATAKANA_RE.test(unit)) {
     return HALF_WIDTH_KATAKANA_RANK
   }
-  if (KATAKANA_RE.test(getBaseCharacter(unit)) || unit === 'ー') {
+  if (KATAKANA_RE.test(baseCharacter) || unit === 'ー') {
     return KATAKANA_RANK
   }
   return HIRAGANA_RANK
@@ -225,14 +207,16 @@ function normalizeKanaWidth (unit) {
 }
 
 function makeTitleUnit (unit) {
-  const category = getTitleCategory(unit)
-  if (category === 'number') {
+  if (DECIMAL_NUMBER_RE.test(unit)) {
     return {
-      category,
+      category: 'number',
       primary: unit,
       widthRank: getDigitWidthRank(unit),
     }
   }
+
+  const baseCharacter = getBaseCharacter(unit)
+  const category = getTitleCategory(unit, baseCharacter)
   if (category === 'symbol') {
     return {
       category,
@@ -242,7 +226,7 @@ function makeTitleUnit (unit) {
   }
   if (category === 'latin') {
     return {
-      caseRank: getCaseRank(unit),
+      caseRank: getCaseRank(baseCharacter),
       category,
       primary: unit,
       widthRank: getLatinWidthRank(unit),
@@ -252,12 +236,12 @@ function makeTitleUnit (unit) {
     return {
       category,
       primary: normalizeKanaWidth(unit),
-      variantRank: getKanaRank(unit),
+      variantRank: getKanaRank(unit, baseCharacter),
     }
   }
   if (category === 'otherLetter') {
     return {
-      caseRank: getCaseRank(unit),
+      caseRank: getCaseRank(baseCharacter),
       category,
       primary: unit,
     }
@@ -268,8 +252,8 @@ function makeTitleUnit (unit) {
   }
 }
 
-function analyzeTitle (title, segmenter) {
-  return getTitleUnits(title, segmenter).map(makeTitleUnit)
+function analyzeTitle (normalizedTitle, segmenter) {
+  return getTitleUnits(normalizedTitle, segmenter).map(makeTitleUnit)
 }
 
 function compareCodePointString (value1, value2) {
@@ -292,9 +276,6 @@ function compareTextPrimary (unit1, unit2, collators) {
   }
   if (unit1.category === 'kana') {
     return collators.kana.compare(unit1.primary, unit2.primary)
-  }
-  if (unit1.category === 'otherLetter') {
-    return collators.otherLetter.compare(unit1.primary, unit2.primary)
   }
   return collators.text.compare(unit1.primary, unit2.primary)
 }
@@ -354,12 +335,11 @@ function compareTitleUnits (units1, units2, collators) {
   return 0
 }
 
-function createStructuredTitleCompare (locales) {
+function createStructuredTitleCompare (locales, textCollator) {
   const segmenter = createSegmenter(locales)
   const collators = {
     kana: createCollator(locales, KANA_COLLATOR_OPTIONS),
-    otherLetter: createCollator(locales, OTHER_LETTER_COLLATOR_OPTIONS),
-    text: createCollator(locales, TEXT_COLLATOR_OPTIONS),
+    text: textCollator,
   }
   const unitCache = new Map()
   const getUnits = (title) => {
@@ -382,7 +362,7 @@ function createGenericTitleCompare (collator, tieBreaker) {
   const getTitle = (title) => {
     const titleText = String(title ?? '')
     if (!titleCache.has(titleText)) {
-      titleCache.set(titleText, normalizeTitle(titleText))
+      titleCache.set(titleText, titleText.normalize('NFC'))
     }
     return titleCache.get(titleText)
   }
@@ -399,12 +379,12 @@ export function createTitleComparator (
   reverse = false,
   locales = getTitleSortLocales(),
 ) {
-  const genericCollator = createCollator(locales, GENERIC_COLLATOR_OPTIONS)
-  const structuredCompare = createStructuredTitleCompare(locales)
-  const compare = genericCollator.resolvedOptions().locale === 'ja' ||
-    genericCollator.resolvedOptions().locale.startsWith('ja-')
+  const textCollator = createCollator(locales, TEXT_COLLATOR_OPTIONS)
+  const structuredCompare = createStructuredTitleCompare(locales, textCollator)
+  const resolvedLocale = textCollator.resolvedOptions().locale
+  const compare = resolvedLocale === 'ja' || resolvedLocale.startsWith('ja-')
     ? structuredCompare
-    : createGenericTitleCompare(genericCollator, structuredCompare)
+    : createGenericTitleCompare(textCollator, structuredCompare)
 
   return reverse
     ? (tab1, tab2) => compare(tab2, tab1)
