@@ -1,15 +1,25 @@
 import {
   ALL_MENU_ITEMS,
+  KEY_ACCESS,
+  KEY_ACCESS_REV,
   KEY_ALL_GROUPS_MENU,
   KEY_CONTEXTS,
   KEY_CURRENT_AREA,
   KEY_GROUP_SCOPE,
+  KEY_ID,
+  KEY_ID_REV,
   KEY_MENU_ITEMS,
   KEY_NOTIFICATION,
   KEY_PINNED_SCOPE,
+  KEY_RAND,
+  KEY_REV,
   KEY_SORT,
+  KEY_TITLE,
+  KEY_TITLE_REV,
   KEY_TOP_LEVEL_ONLY,
   KEY_TOP_LEVEL_SCOPE,
+  KEY_URL,
+  KEY_URL_REV,
   KEY_USE_GROUP_NAME_AS_GROUP_TITLE,
   debug,
   getValue,
@@ -34,6 +44,24 @@ const {
 
 const KEY_SORT_ACTION = KEY_SORT + ':action'
 
+const MENU_ACCESS_KEYS = {
+  [KEY_SORT]: 'S',
+  [KEY_URL]: 'U',
+  [KEY_URL_REV]: 'L',
+  [KEY_TITLE]: 'T',
+  [KEY_TITLE_REV]: 'I',
+  [KEY_ID]: 'O',
+  [KEY_ID_REV]: 'N',
+  [KEY_ACCESS]: 'A',
+  [KEY_ACCESS_REV]: 'C',
+  [KEY_RAND]: 'R',
+  [KEY_REV]: 'E',
+  [KEY_TOP_LEVEL_SCOPE]: 'L',
+  [KEY_GROUP_SCOPE]: 'G',
+  [KEY_PINNED_SCOPE]: 'P',
+  [KEY_ALL_GROUPS_MENU]: 'A',
+}
+
 let rebuildMenuPromise
 let rebuildMenuRequested = false
 let currentContexts = []
@@ -53,49 +81,20 @@ function getKeyMenuId (key) {
   return 'key:' + key
 }
 
-function joinMenuTitle (...titles) {
-  return titles.filter(Boolean).join(': ')
+function getMenuTitle (...labelKeys) {
+  const title = labelKeys.map((key) => i18n.getMessage(key)).join(': ')
+  return title + ' (&' + MENU_ACCESS_KEYS[labelKeys[0]] + ')'
 }
 
-function getCurrentHierarchyMenuTitle (targetTab) {
-  if (targetTab.pinned) {
-    return i18n.getMessage(KEY_PINNED_SCOPE)
-  }
-
-  if (isGroupedTab(targetTab)) {
-    return i18n.getMessage(KEY_GROUP_SCOPE)
-  }
-
-  return i18n.getMessage(KEY_TOP_LEVEL_SCOPE)
-}
-
-function getScopeMenuTitle (scope, targetTab) {
+function getScopeMenuLabelKey (scope, targetTab) {
   if (scope === KEY_CURRENT_AREA) {
-    return getCurrentHierarchyMenuTitle(targetTab)
+    if (targetTab.pinned) {
+      return KEY_PINNED_SCOPE
+    }
+    return isGroupedTab(targetTab) ? KEY_GROUP_SCOPE : KEY_TOP_LEVEL_SCOPE
   }
 
-  if (scope === KEY_TOP_LEVEL_ONLY) {
-    return i18n.getMessage(KEY_TOP_LEVEL_SCOPE)
-  }
-
-  return i18n.getMessage(KEY_ALL_GROUPS_MENU)
-}
-
-function getSortKeyTitle (key) {
-  return joinMenuTitle(i18n.getMessage(KEY_SORT), i18n.getMessage(key))
-}
-
-function getSortKeyScopeTitle (key, scope, targetTab) {
-  return joinMenuTitle(
-    i18n.getMessage(KEY_SORT),
-    i18n.getMessage(key),
-    getScopeMenuTitle(scope, targetTab),
-  )
-}
-
-function getKeyScopeTitle (key, scope, targetTab) {
-  return joinMenuTitle(i18n.getMessage(key), getScopeMenuTitle(scope,
-    targetTab))
+  return scope === KEY_TOP_LEVEL_ONLY ? KEY_TOP_LEVEL_SCOPE : KEY_ALL_GROUPS_MENU
 }
 
 function getMenuEntries (menuItems) {
@@ -156,12 +155,12 @@ function getPotentialEntries (entries) {
   }))
 }
 
-function createLeafMenuRenderItem (key, scope, title, parentId) {
+function createLeafMenuRenderItem (key, scope, targetTab, parentId) {
   return {
     action: { key, scope },
     id: getLeafMenuId(key, scope),
     parentId,
-    title,
+    title: getMenuTitle(getScopeMenuLabelKey(scope, targetTab)),
   }
 }
 
@@ -170,7 +169,7 @@ function createKeyLeafMenuRenderItem (key, scope, targetTab) {
     action: { key, scope },
     id: getFlatLeafMenuId(key, scope),
     parentId: KEY_SORT,
-    title: getKeyScopeTitle(key, scope, targetTab),
+    title: getMenuTitle(key, getScopeMenuLabelKey(scope, targetTab)),
   }
 }
 
@@ -181,7 +180,7 @@ function createMenuRenderPlan (visibleEntries, targetTab,
   const actions = new Map()
   const items = []
   const root = {
-    title: i18n.getMessage(KEY_SORT),
+    title: getMenuTitle(KEY_SORT),
     visible: effectiveEntries.length > 0,
   }
 
@@ -189,17 +188,18 @@ function createMenuRenderPlan (visibleEntries, targetTab,
     const [{ key, scopes }] = effectiveEntries
     if (scopes.length === 1) {
       const scope = scopes[0]
-      root.title = getSortKeyScopeTitle(key, scope, targetTab)
+      root.title = getMenuTitle(KEY_SORT, key,
+        getScopeMenuLabelKey(scope, targetTab))
       actions.set(KEY_SORT, { key, scope })
       return { actions, items, root }
     }
 
-    root.title = getSortKeyTitle(key)
+    root.title = getMenuTitle(KEY_SORT, key)
     for (const scope of scopes) {
       items.push(createLeafMenuRenderItem(
         key,
         scope,
-        getScopeMenuTitle(scope, targetTab),
+        targetTab,
         KEY_SORT,
       ))
     }
@@ -216,13 +216,13 @@ function createMenuRenderPlan (visibleEntries, targetTab,
     items.push({
       id: parentId,
       parentId: KEY_SORT,
-      title: i18n.getMessage(key),
+      title: getMenuTitle(key),
     })
     for (const scope of scopes) {
       items.push(createLeafMenuRenderItem(
         key,
         scope,
-        getScopeMenuTitle(scope, targetTab),
+        targetTab,
         parentId,
       ))
     }
@@ -276,7 +276,7 @@ async function createStaticMenuItems (entries, contexts) {
     for (const scope of scopes) {
       await createManagedMenuItem({
         id: getLeafMenuId(key, scope),
-        title: getScopeMenuTitle(scope, {}),
+        title: getMenuTitle(getScopeMenuLabelKey(scope, {})),
         contexts,
         parentId: KEY_SORT,
         visible: false,
@@ -289,7 +289,7 @@ async function createStaticMenuItems (entries, contexts) {
     const keyMenuId = getKeyMenuId(key)
     await createManagedMenuItem({
       id: keyMenuId,
-      title: i18n.getMessage(key),
+      title: getMenuTitle(key),
       contexts,
       parentId: KEY_SORT,
       visible: false,
@@ -298,7 +298,7 @@ async function createStaticMenuItems (entries, contexts) {
     for (const scope of scopes) {
       await createManagedMenuItem({
         id: getFlatLeafMenuId(key, scope),
-        title: getKeyScopeTitle(key, scope, {}),
+        title: getMenuTitle(key, getScopeMenuLabelKey(scope, {})),
         contexts,
         parentId: KEY_SORT,
         visible: false,
@@ -312,7 +312,7 @@ async function createStaticMenuItems (entries, contexts) {
     for (const scope of scopes) {
       await createManagedMenuItem({
         id: getLeafMenuId(key, scope),
-        title: getScopeMenuTitle(scope, {}),
+        title: getMenuTitle(getScopeMenuLabelKey(scope, {})),
         contexts,
         parentId: keyMenuId,
         visible: false,
@@ -344,12 +344,12 @@ async function rebuildMenu () {
 
   await createMenuItem({
     id: KEY_SORT,
-    title: i18n.getMessage(KEY_SORT),
+    title: getMenuTitle(KEY_SORT),
     contexts,
   })
   await createMenuItem({
     id: KEY_SORT_ACTION,
-    title: i18n.getMessage(KEY_SORT),
+    title: getMenuTitle(KEY_SORT),
     contexts,
     visible: false,
   })

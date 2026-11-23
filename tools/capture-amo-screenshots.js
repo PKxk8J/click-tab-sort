@@ -676,16 +676,17 @@ async function captureMenuScreenshot ({ shallow, path, cropName, fallbackCrop })
       height: 780,
     })
     await driver.sleep(500)
+    const { sort, url } = CAPTURE_TEXT.labels
     const topMatcher = shallow
-      ? createLabelMatcher({ prefix: CAPTURE_TEXT.labels.sort + ': ' })
-      : createLabelMatcher({ exact: CAPTURE_TEXT.labels.sort })
+      ? createLabelMatcher({ prefix: sort + ': ' })
+      : createLabelMatcher({ exact: sort + ' (S)' })
 
     await closeChromeMenus()
     await openSelectedTabContextMenu()
     await hoverChromeMenuItem(topMatcher)
     if (!shallow) {
       await hoverChromeMenuItem(createLabelMatcher({
-        exact: CAPTURE_TEXT.labels.url,
+        exact: url + ' (U)',
       }))
     }
     await driver.sleep(800)
