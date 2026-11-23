@@ -211,7 +211,9 @@ function getAllChildIds (parentId) {
 test('ロード時にメニューを復元する', async () => {
   assert.ok(state.menuItems.has('sort'))
   assert.notEqual(state.menuItems.get('sort').visible, false)
+  assert.equal(state.menuItems.get('sort').title, 'sort (&S)')
   assert.equal(state.menuItems.get('sort:action').visible, false)
+  assert.equal(state.menuItems.get('sort:action').title, 'sort (&S)')
   assert.deepEqual(getAllChildIds('sort'), [
     'scope:url:currentArea',
     'scope:url:topLevelOnly',
@@ -245,7 +247,7 @@ test('表示処理は進行中のメニュー復元完了を待つ', async () =>
   assert.equal(state.menuItems.get('sort').visible, false)
   assert.equal(state.menuItems.get('sort:action').visible, true)
   assert.equal(state.menuItems.get('sort:action').title,
-    'sort: title: topLevelScope')
+    'sort: title: topLevelScope (&S)')
   assert.equal(state.refreshCount, 1)
 })
 
@@ -295,7 +297,7 @@ test('トップレベル以外の階層がない場合は単一の実行候補�
   assert.equal(state.menuItems.get('sort').visible, false)
   assert.equal(state.menuItems.get('sort:action').visible, true)
   assert.equal(state.menuItems.get('sort:action').title,
-    'sort: url: topLevelScope')
+    'sort: url: topLevelScope (&S)')
   assert.deepEqual(getChildIds('sort'), [])
   assert.equal(state.refreshCount, 1)
 
@@ -337,7 +339,7 @@ test('トップレベルタブではクリックした階層内だけの設定�
   assert.equal(state.menuItems.get('sort').visible, false)
   assert.equal(state.menuItems.get('sort:action').visible, true)
   assert.equal(state.menuItems.get('sort:action').title,
-    'sort: url: topLevelScope')
+    'sort: url: topLevelScope (&S)')
   assert.deepEqual(getChildIds('sort'), [])
 
   await clickMenu('sort:action', 2)
@@ -361,7 +363,7 @@ test('トップレベル以外の階層がない場合も設定で選んだ最�
   assert.equal(state.menuItems.get('sort').visible, false)
   assert.equal(state.menuItems.get('sort:action').visible, true)
   assert.equal(state.menuItems.get('sort:action').title,
-    'sort: url: allGroupsMenu')
+    'sort: url: allGroupsMenu (&S)')
   assert.deepEqual(getChildIds('sort'), [])
 })
 
@@ -378,18 +380,18 @@ test('トップレベルタブでグループがある場合はトップレベ�
 
   assert.notEqual(state.menuItems.get('sort').visible, false)
   assert.equal(state.menuItems.get('sort:action').visible, false)
-  assert.equal(state.menuItems.get('sort').title, 'sort: url')
+  assert.equal(state.menuItems.get('sort').title, 'sort: url (&S)')
   assert.deepEqual(getChildIds('sort'), [
     'scope:url:currentArea',
     'scope:url:allGroups',
   ])
   assert.equal(
     state.menuItems.get('scope:url:currentArea').title,
-    'topLevelScope',
+    'topLevelScope (&L)',
   )
   assert.equal(
     state.menuItems.get('scope:url:allGroups').title,
-    'allGroupsMenu',
+    'allGroupsMenu (&A)',
   )
 })
 
@@ -411,15 +413,15 @@ test('グループ内タブではグループ内・トップレベル・全階�
   ])
   assert.equal(
     state.menuItems.get('scope:url:currentArea').title,
-    'groupScope',
+    'groupScope (&G)',
   )
   assert.equal(
     state.menuItems.get('scope:url:topLevelOnly').title,
-    'topLevelScope',
+    'topLevelScope (&L)',
   )
   assert.equal(
     state.menuItems.get('scope:url:allGroups').title,
-    'allGroupsMenu',
+    'allGroupsMenu (&A)',
   )
 })
 
@@ -434,7 +436,7 @@ test('ピン留めタブではピン留め内・トップレベル・全階層�
   await rebuildMenu()
   await showMenu(1)
 
-  assert.equal(state.menuItems.get('sort').title, 'sort: url')
+  assert.equal(state.menuItems.get('sort').title, 'sort: url (&S)')
   assert.deepEqual(getChildIds('sort'), [
     'scope:url:currentArea',
     'scope:url:topLevelOnly',
@@ -442,15 +444,15 @@ test('ピン留めタブではピン留め内・トップレベル・全階層�
   ])
   assert.equal(
     state.menuItems.get('scope:url:currentArea').title,
-    'pinnedScope',
+    'pinnedScope (&P)',
   )
   assert.equal(
     state.menuItems.get('scope:url:topLevelOnly').title,
-    'topLevelScope',
+    'topLevelScope (&L)',
   )
   assert.equal(
     state.menuItems.get('scope:url:allGroups').title,
-    'allGroupsMenu',
+    'allGroupsMenu (&A)',
   )
 })
 
@@ -465,7 +467,7 @@ test('トップレベルタブでもピン留め階層がある場合は全階�
   await rebuildMenu()
   await showMenu(1)
 
-  assert.equal(state.menuItems.get('sort').title, 'sort: url')
+  assert.equal(state.menuItems.get('sort').title, 'sort: url (&S)')
   assert.deepEqual(getChildIds('sort'), [
     'scope:url:currentArea',
     'scope:url:allGroups',
@@ -486,17 +488,46 @@ test('複数項目で各項目の階層が1つだけの場合は項目名に階�
   await rebuildMenu()
   await showMenu(1)
 
-  assert.equal(state.menuItems.get('sort').title, 'sort')
+  assert.equal(state.menuItems.get('sort').title, 'sort (&S)')
   assert.deepEqual(getChildIds('sort'), [
     'flatScope:url:currentArea',
     'flatScope:title:currentArea',
   ])
   assert.equal(
     state.menuItems.get('flatScope:url:currentArea').title,
-    'url: topLevelScope',
+    'url: topLevelScope (&U)',
   )
   assert.equal(
     state.menuItems.get('flatScope:title:currentArea').title,
-    'title: topLevelScope',
+    'title: topLevelScope (&T)',
   )
+})
+
+test('サブメニューと直接実行が混在しても並べ替え方法の操作キーは重複しない', async () => {
+  resetState({
+    menuItems: {
+      url: ['currentArea', 'allGroups'],
+      urlReverse: ['allGroups'],
+      title: ['allGroups'],
+      titleReverse: ['allGroups'],
+      id: ['allGroups'],
+      idReverse: ['allGroups'],
+      access: ['allGroups'],
+      accessReverse: ['allGroups'],
+      random: ['allGroups'],
+      reverse: ['allGroups'],
+    },
+    tabs: [
+      { id: 1, windowId: 1, index: 0, active: true, groupId: 10 },
+      { id: 2, windowId: 1, index: 1 },
+    ],
+  })
+  await rebuildMenu()
+  await showMenu(1)
+
+  const accessKeys = getChildIds('sort').map((id) => {
+    return state.menuItems.get(id).title.match(/ \(&([A-Z])\)$/)?.[1]
+  })
+  assert.deepEqual(accessKeys, ['U', 'L', 'T', 'I', 'O', 'N', 'A', 'C', 'R', 'E'])
+  assert.equal(state.menuItems.get('key:url').title, 'url (&U)')
 })
